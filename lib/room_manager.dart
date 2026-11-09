@@ -80,8 +80,8 @@ class RoomManager {
   }
 
   void _handleNewClient(Socket socket) {
-    final subscription = socket
-        .transform(utf8.decoder)
+    final subscription = utf8.decoder
+        .bind(socket)
         .transform(const LineSplitter())
         .listen(
       (line) => _handleClientMessage(socket, line),
@@ -193,8 +193,8 @@ class RoomManager {
     isHost = false;
     isConnected = true;
 
-    _clientSocket!
-        .transform(utf8.decoder)
+    utf8.decoder
+        .bind(_clientSocket!)
         .transform(const LineSplitter())
         .listen(
       (line) => _messages.add(line),
