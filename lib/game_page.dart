@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'questions.dart';
 import 'game_engine.dart';
@@ -95,8 +96,8 @@ class _GamePageState extends State<GamePage> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -104,7 +105,10 @@ class _GamePageState extends State<GamePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _info('النقاط', '${engine.score}'),
-                  _info('السؤال', '${engine.currentIndex + 1}/${questions.length}'),
+                  _info(
+                    'السؤال',
+                    '${engine.currentIndex + 1}/${questions.length}',
+                  ),
                   _info('الوقت', '${engine.remainingSeconds}'),
                 ],
               ),
@@ -147,6 +151,7 @@ class _GamePageState extends State<GamePage> {
                 ),
               ),
               const SizedBox(height: 25),
+
               ...List.generate(question.answers.length, (index) {
                 final isCorrect = index == question.correctAnswer;
                 final isSelected = index == selectedAnswer;
@@ -174,24 +179,34 @@ class _GamePageState extends State<GamePage> {
                       onPressed: answered ? null : () => _answer(index),
                       child: Text(
                         question.answers[index],
+                        textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 19),
                       ),
                     ),
                   ),
                 );
               }),
-              const Spacer(),
+
               if (answered)
-                Text(
-                  lastResult == true ? 'إجابة صحيحة!' : 'انتهى الوقت أو إجابة خاطئة',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                    color: lastResult == true ? Colors.green : Colors.orange,
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    lastResult == true
+                        ? 'إجابة صحيحة!'
+                        : 'انتهى الوقت أو إجابة خاطئة',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.bold,
+                      color: lastResult == true
+                          ? Colors.green
+                          : Colors.orange,
+                    ),
                   ),
                 ),
-              const SizedBox(height: 12),
+
+              const SizedBox(height: 15),
+
               SizedBox(
                 height: 55,
                 child: ElevatedButton(
@@ -209,6 +224,8 @@ class _GamePageState extends State<GamePage> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -239,44 +256,49 @@ class _GamePageState extends State<GamePage> {
         title: const Text('النتيجة النهائية'),
         centerTitle: true,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.emoji_events,
-              color: Color(0xFFD6AE55),
-              size: 100,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.emoji_events,
+                  color: Color(0xFFD6AE55),
+                  size: 100,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'انتهت اللعبة!',
+                  style: TextStyle(fontSize: 28),
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  'نقاطك: ${engine.score}',
+                  style: const TextStyle(
+                    fontSize: 25,
+                    color: Color(0xFFD6AE55),
+                  ),
+                ),
+                Text('الإجابات الصحيحة: ${engine.correctAnswers}'),
+                Text('الإجابات الخاطئة: ${engine.wrongAnswers}'),
+                const SizedBox(height: 25),
+                ElevatedButton(
+                  onPressed: () {
+                    engine.reset();
+                    setState(() {
+                      answered = false;
+                      lastResult = null;
+                      selectedAnswer = null;
+                    });
+                    _startTimer();
+                  },
+                  child: const Text('إعادة اللعب'),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'انتهت اللعبة!',
-              style: TextStyle(fontSize: 28),
-            ),
-            const SizedBox(height: 15),
-            Text(
-              'نقاطك: ${engine.score}',
-              style: const TextStyle(
-                fontSize: 25,
-                color: Color(0xFFD6AE55),
-              ),
-            ),
-            Text('الإجابات الصحيحة: ${engine.correctAnswers}'),
-            Text('الإجابات الخاطئة: ${engine.wrongAnswers}'),
-            const SizedBox(height: 25),
-            ElevatedButton(
-              onPressed: () {
-                engine.reset();
-                setState(() {
-                  answered = false;
-                  lastResult = null;
-                  selectedAnswer = null;
-                });
-                _startTimer();
-              },
-              child: const Text('إعادة اللعب'),
-            ),
-          ],
+          ),
         ),
       ),
     );
