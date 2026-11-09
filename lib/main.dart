@@ -1,4 +1,6 @@
+
 import 'package:flutter/material.dart';
+import 'game_page.dart';
 
 void main() {
   runApp(const BrainClash());
@@ -15,7 +17,6 @@ class BrainClash extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF080D1B),
-        fontFamily: 'Arial',
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFD6AE55),
           brightness: Brightness.dark,
@@ -52,7 +53,7 @@ class HomePage extends StatelessWidget {
                 children: [
                   const Icon(
                     Icons.psychology_alt,
-                    size: 100,
+                    size: 105,
                     color: Color(0xFFD6AE55),
                   ),
                   const SizedBox(height: 20),
@@ -76,20 +77,17 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 55),
                   SizedBox(
                     width: double.infinity,
-                    height: 58,
+                    height: 60,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFD6AE55),
                         foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
                       ),
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const GamePage(),
+                            builder: (_) => const GamePage(),
                           ),
                         );
                       },
@@ -106,62 +104,6 @@ class HomePage extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class GamePage extends StatelessWidget {
-  const GamePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Brain Clash'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.emoji_events,
-              size: 85,
-              color: Color(0xFFD6AE55),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'اختر طريقة اللعب',
-              style: TextStyle(
-                fontSize: 25,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 30),
-            gameButton(context, 'اللعب الفردي'),
-            const SizedBox(height: 15),
-            gameButton(context, 'اللعب الجماعي'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget gameButton(BuildContext context, String title) {
-    return SizedBox(
-      width: 260,
-      height: 55,
-      child: ElevatedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title قريباً')),
-          );
-        },
-        child: Text(
-          title,
-          style: const TextStyle(fontSize: 19),
         ),
       ),
     );
