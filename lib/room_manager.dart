@@ -1,93 +1,175 @@
+
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:async';
 
 class RoomManager {
+  static const int defaultPort = 4040;
+
   ServerSocket? _server;
-  Socket? _connection;
-  final List<Socket> _players = [];
+  Socket? _clientSocket;
 
-  bool get isHost => _server != null;
-  bool get isConnected => _connection != null;
+  final Set<Socket> _clients = {};
 
-  final StreamController<Map<String, dynamic>> _messages =
-      StreamController.broadcast();
+  final StreamController<String> _messages =
+      StreamController<String>.broadcast();
 
-  Stream<Map<String, dynamic>> get messages => _messages.stream;
+  String? hostIp;
+  int port = defaultPort;
 
-  Future<int> createRoom() async {
+  bool isHost = false;
+  bool isConnected = false;
+
+  Stream<String> get messages => _messages.stream;
+
+  // إنشاء غرفة واستقبال اللاعبين
+  Future<void> createRoom() async {
+    await _closeConnections();
+
+    isHost = true;
+    port = defaultPort;
+
     _server = await ServerSocket.bind(
       InternetAddress.anyIPv4,
-      4040,
+      port,
     );
 
-    _server!.listen((socket) {
-      _players.add(socket);
-      _listenToSocket(socket);
-    });
+    final interfaces = await NetworkInterface.list(
+      type: InternetAddressType.IPv4,
+      includeLoopback: false,
+    );
 
-    return _server!.port;
+    hostIp = null;
+
+    for (final interface in interfaces) {
+      for (final address in interface.addresses) {
+        if (!address.isLoopback && !address.isLinkLocal) {
+          hostIp = address.address;
+          break;
+        }
+      }
+      if (hostIp != null) break;
+    }
+
+    _server!.listen((socket) {
+      _clients.add(socket);
+      isConnected = true;
+
+      _listenToSocket(socket, (message) {
+        _messages.add(message);
+
+        for (final client in _clients) {
+          if (client != socket) {
+            client.write('${jsonEncode(message)}\n');
+          }
+        }
+      }, () {
+        _clients.remove(socket);
+        isConnected = _clients.isNotEmpty;
+      });
+    });
   }
 
+  // الانضمام إلى غرفة باستخدام IP
   Future<void> joinRoom(String address) async {
-    _connection = await Socket.connect(
-      address,
-      4040,
+    await _closeConnections();
+
+    final cleanedAddress = address.trim();
+    final parts = cleanedAddress.split(':');
+
+    final host = parts[0];
+    final targetPort = parts.length > 1
+        ? int.tryParse(parts[1]) ?? defaultPort
+        : defaultPort;
+
+    if (targetPort < 1 || targetPort > 65535) {
+      throw Exception('عنوان المنفذ غير صحيح');
+    }
+
+    _clientSocket = await Socket.connect(
+      host,
+      targetPort,
       timeout: const Duration(seconds: 10),
     );
 
-    _listenToSocket(_connection!);
+    isHost = false;
+    isConnected = true;
+
+    _listenToSocket(
+      _clientSocket!,
+      (message) {
+        _messages.add(message);
+      },
+      () {
+        isConnected = false;
+        _clientSocket = null;
+      },
+    );
   }
 
-  void _listenToSocket(Socket socket) {
+  // إرسال رسالة إلى اللاعبين
+  void sendMessage(String message) {
+    if (!isConnected || message.trim().isEmpty) return;
+
+    if (isHost) {
+      _messages.add(message);
+
+      for (final client in _clients) {
+        client.write('${jsonEncode(message)}\n');
+      }
+    } else {
+      _clientSocket?.write('${jsonEncode(message)}\n');
+      _messages.add(message);
+    }
+  }
+
+  // استقبال الرسائل
+  void _listenToSocket(
+    Socket socket,
+    void Function(String) onMessage,
+    void Function() onDisconnect,
+  ) {
     socket
         .transform(utf8.decoder)
         .transform(const LineSplitter())
-        .listen((data) {
-      try {
-        final message = jsonDecode(data);
-        if (message is Map<String, dynamic>) {
-          _messages.add(message);
+        .listen(
+      (line) {
+        try {
+          final decoded = jsonDecode(line);
+          if (decoded is String) {
+            onMessage(decoded);
+          }
+        } catch (_) {
+          onMessage(line);
         }
-      } catch (_) {}
-    }, onDone: () {
-      if (socket == _connection) {
-        _connection = null;
-      }
-      _players.remove(socket);
-    });
+      },
+      onDone: onDisconnect,
+      onError: (_) => onDisconnect(),
+      cancelOnError: true,
+    );
   }
 
-  void sendToHost(Map<String, dynamic> data) {
-    if (_connection != null) {
-      _connection!.write('${jsonEncode(data)}\n');
-    }
-  }
-
-  void broadcast(Map<String, dynamic> data) {
-    final message = '${jsonEncode(data)}\n';
-
-    for (final player in List<Socket>.from(_players)) {
-      player.write(message);
-    }
-  }
-
-  Future<void> closeRoom() async {
-    for (final player in _players) {
-      await player.close();
-    }
-
-    _players.clear();
-
-    await _connection?.close();
-    _connection = null;
-
+  // إغلاق الاتصالات
+  Future<void> _closeConnections() async {
     await _server?.close();
     _server = null;
+
+    for (final client in _clients.toList()) {
+      await client.close();
+    }
+
+    _clients.clear();
+
+    await _clientSocket?.close();
+    _clientSocket = null;
+
+    isConnected = false;
   }
 
-  Future<void> dispose() async {
-    await closeRoom();
-    await _messages.close();
+  // إنهاء الغرفة
+  void dispose() {
+    _closeConnections();
+    isHost = false;
+    hostIp = null;
   }
 }
