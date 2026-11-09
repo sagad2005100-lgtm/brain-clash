@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+import 'questions.dart';
 import 'game_engine.dart';
 import 'stage_progress.dart';
 import 'stage_questions.dart';
@@ -31,7 +31,6 @@ class _GamePageState extends State<GamePage> {
     super.initState();
 
     stageQuestions = StageQuestions.getQuestions(widget.stageNumber);
-
     engine = GameEngine(questions: stageQuestions);
 
     if (stageQuestions.isNotEmpty) {
@@ -87,6 +86,7 @@ class _GamePageState extends State<GamePage> {
 
   Future<void> _saveProgress() async {
     if (progressSaved) return;
+
     progressSaved = true;
 
     final stars = StageProgress.starsForCorrectAnswers(
@@ -107,7 +107,9 @@ class _GamePageState extends State<GamePage> {
   Widget build(BuildContext context) {
     if (stageQuestions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: Text('المرحلة ${widget.stageNumber}')),
+        appBar: AppBar(
+          title: Text('المرحلة ${widget.stageNumber}'),
+        ),
         body: const Center(
           child: Text(
             'أسئلة هذه المرحلة لم تُضف بعد',
@@ -295,7 +297,9 @@ class _GamePageState extends State<GamePage> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('النتيجة النهائية')),
+      appBar: AppBar(
+        title: const Text('النتيجة النهائية'),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -323,7 +327,10 @@ class _GamePageState extends State<GamePage> {
               const SizedBox(height: 15),
               Text(
                 'النقاط: ${engine.score}',
-                style: const TextStyle(color: gold, fontSize: 24),
+                style: const TextStyle(
+                  color: gold,
+                  fontSize: 24,
+                ),
               ),
               Text('الإجابات الصحيحة: ${engine.correctAnswers}'),
               Text('الإجابات الخاطئة: ${engine.wrongAnswers}'),
