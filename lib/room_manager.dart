@@ -22,7 +22,7 @@ class RoomManager {
 
   Stream<String> get messages => _messages.stream;
 
-  // إنشاء غرفة واستقبال اللاعبين
+  // إنشاء غرفة
   Future<void> createRoom() async {
     await _closeConnections();
 
@@ -33,6 +33,8 @@ class RoomManager {
       InternetAddress.anyIPv4,
       port,
     );
+
+    isConnected = true;
 
     final interfaces = await NetworkInterface.list(
       type: InternetAddressType.IPv4,
@@ -48,42 +50,57 @@ class RoomManager {
           break;
         }
       }
+
       if (hostIp != null) break;
     }
 
-    _server!.listen((socket) {
-      _clients.add(socket);
-      isConnected = true;
+    _server!.listen(
+      (socket) {
+        _clients.add(socket);
 
-      _listenToSocket(socket, (message) {
-        _messages.add(message);
+        _listenToSocket(
+          socket,
+          (message) {
+            _messages.add(message);
 
-        for (final client in _clients) {
-          if (client != socket) {
-            client.write('${jsonEncode(message)}\n');
-          }
-        }
-      }, () {
-        _clients.remove(socket);
-        isConnected = _clients.isNotEmpty;
-      });
-    });
+            for (final client in _clients.toList()) {
+              if (client != socket) {
+                client.write('${jsonEncode(message)}\n');
+              }
+            }
+          },
+          () {
+            _clients.remove(socket);
+          },
+        );
+      },
+      onError: (_) {
+        isConnected = false;
+      },
+    );
   }
 
-  // الانضمام إلى غرفة باستخدام IP
+  // الانضمام باستخدام IP
   Future<void> joinRoom(String address) async {
     await _closeConnections();
 
     final cleanedAddress = address.trim();
     final parts = cleanedAddress.split(':');
 
+    if (parts.length > 2 || parts[0].isEmpty) {
+      throw Exception('عنوان IP غير صحيح');
+    }
+
     final host = parts[0];
-    final targetPort = parts.length > 1
-        ? int.tryParse(parts[1]) ?? defaultPort
+
+    final targetPort = parts.length == 2
+        ? int.tryParse(parts[1])
         : defaultPort;
 
-    if (targetPort < 1 || targetPort > 65535) {
-      throw Exception('عنوان المنفذ غير صحيح');
+    if (targetPort == null ||
+        targetPort < 1 ||
+        targetPort > 65535) {
+      throw Exception('رقم المنفذ غير صحيح');
     }
 
     _clientSocket = await Socket.connect(
@@ -107,18 +124,22 @@ class RoomManager {
     );
   }
 
-  // إرسال رسالة إلى اللاعبين
+  // إرسال رسالة
   void sendMessage(String message) {
-    if (!isConnected || message.trim().isEmpty) return;
+    if (!isConnected || message.trim().isEmpty) {
+      return;
+    }
+
+    final data = '${jsonEncode(message)}\n';
 
     if (isHost) {
       _messages.add(message);
 
-      for (final client in _clients) {
-        client.write('${jsonEncode(message)}\n');
+      for (final client in _clients.toList()) {
+        client.write(data);
       }
     } else {
-      _clientSocket?.write('${jsonEncode(message)}\n');
+      _clientSocket?.write(data);
       _messages.add(message);
     }
   }
@@ -136,6 +157,7 @@ class RoomManager {
       (line) {
         try {
           final decoded = jsonDecode(line);
+
           if (decoded is String) {
             onMessage(decoded);
           }
@@ -168,8 +190,17 @@ class RoomManager {
 
   // إنهاء الغرفة
   void dispose() {
-    _closeConnections();
     isHost = false;
     hostIp = null;
+
+    unawaited(_disposeAsync());
+  }
+
+  Future<void> _disposeAsync() async {
+    await _closeConnections();
+
+    if (!_messages.isClosed) {
+      await _messages.close();
+    }
   }
 }
