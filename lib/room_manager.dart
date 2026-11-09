@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 class RoomManager {
   static const int defaultPort = 4040;
@@ -9,12 +10,16 @@ class RoomManager {
   ServerSocket? _server;
   Socket? _clientSocket;
 
-  final Set<Socket> _clients = {};
+  final Map<String, Socket> _clients = {};
+  final Map<Socket, String> _socketPlayers = {};
+  final Map<Socket, StreamSubscription<String>> _subscriptions = {};
 
   final StreamController<String> _messages =
       StreamController<String>.broadcast();
 
   String? hostIp;
+  String playerId = '';
+  String playerName = 'لاعب';
   int port = defaultPort;
 
   bool isHost = false;
@@ -22,12 +27,25 @@ class RoomManager {
 
   Stream<String> get messages => _messages.stream;
 
-  // إنشاء غرفة
-  Future<void> createRoom() async {
+  final Map<String, String> players = {};
+
+  String _generateId() {
+    return '${DateTime.now().microsecondsSinceEpoch}'
+        '${Random().nextInt(99999)}';
+  }
+
+  Future<void> createRoom({
+    String name = 'المضيف',
+  }) async {
     await _closeConnections();
 
-    isHost = true;
+    playerId = _generateId();
+    playerName = name;
+    players.clear();
+    players[playerId] = playerName;
+
     port = defaultPort;
+    isHost = true;
 
     _server = await ServerSocket.bind(
       InternetAddress.anyIPv4,
@@ -50,38 +68,99 @@ class RoomManager {
           break;
         }
       }
-
       if (hostIp != null) break;
     }
 
     _server!.listen(
-      (socket) {
-        _clients.add(socket);
-
-        _listenToSocket(
-          socket,
-          (message) {
-            _messages.add(message);
-
-            for (final client in _clients.toList()) {
-              if (client != socket) {
-                client.write('${jsonEncode(message)}\n');
-              }
-            }
-          },
-          () {
-            _clients.remove(socket);
-          },
-        );
-      },
+      _handleNewClient,
       onError: (_) {
         isConnected = false;
       },
     );
   }
 
-  // الانضمام باستخدام IP
-  Future<void> joinRoom(String address) async {
+  void _handleNewClient(Socket socket) {
+    final subscription = socket
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(
+      (line) => _handleClientMessage(socket, line),
+      onDone: () => _removeClient(socket),
+      onError: (_) => _removeClient(socket),
+      cancelOnError: true,
+    );
+
+    _subscriptions[socket] = subscription;
+  }
+
+  void _handleClientMessage(Socket socket, String line) {
+    try {
+      final decoded = jsonDecode(line);
+
+      if (decoded is! Map) return;
+
+      final data = Map<String, dynamic>.from(decoded);
+      final type = data['type'];
+
+      if (type == 'hello') {
+        final id = data['playerId']?.toString() ?? '';
+        final name = data['name']?.toString() ?? 'لاعب';
+
+        if (id.isEmpty) return;
+
+        _clients[id] = socket;
+        _socketPlayers[socket] = id;
+        players[id] = name;
+
+        _emit({
+          'type': 'player_joined',
+          'playerId': id,
+          'name': name,
+        });
+
+        _emit({
+          'type': 'players_update',
+          'players': players,
+        });
+
+        return;
+      }
+
+      if (!_socketPlayers.containsKey(socket)) return;
+
+      data['senderId'] = _socketPlayers[socket];
+      _emit(data);
+    } catch (_) {}
+  }
+
+  void _removeClient(Socket socket) {
+    final id = _socketPlayers.remove(socket);
+
+    if (id != null) {
+      _clients.remove(id);
+      players.remove(id);
+
+      if (isHost && isConnected) {
+        _emit({
+          'type': 'player_left',
+          'playerId': id,
+        });
+
+        _emit({
+          'type': 'players_update',
+          'players': players,
+        });
+      }
+    }
+
+    _subscriptions.remove(socket);
+    socket.destroy();
+  }
+
+  Future<void> joinRoom(
+    String address, {
+    String name = 'لاعب',
+  }) async {
     await _closeConnections();
 
     final cleanedAddress = address.trim();
@@ -90,8 +169,6 @@ class RoomManager {
     if (parts.length > 2 || parts[0].isEmpty) {
       throw Exception('عنوان IP غير صحيح');
     }
-
-    final host = parts[0];
 
     final targetPort = parts.length == 2
         ? int.tryParse(parts[1])
@@ -103,8 +180,12 @@ class RoomManager {
       throw Exception('رقم المنفذ غير صحيح');
     }
 
+    playerId = _generateId();
+    playerName = name;
+    port = targetPort;
+
     _clientSocket = await Socket.connect(
-      host,
+      parts[0],
       targetPort,
       timeout: const Duration(seconds: 10),
     );
@@ -112,87 +193,101 @@ class RoomManager {
     isHost = false;
     isConnected = true;
 
-    _listenToSocket(
-      _clientSocket!,
-      (message) {
-        _messages.add(message);
-      },
-      () {
-        isConnected = false;
-        _clientSocket = null;
-      },
-    );
-  }
-
-  // إرسال رسالة
-  void sendMessage(String message) {
-    if (!isConnected || message.trim().isEmpty) {
-      return;
-    }
-
-    final data = '${jsonEncode(message)}\n';
-
-    if (isHost) {
-      _messages.add(message);
-
-      for (final client in _clients.toList()) {
-        client.write(data);
-      }
-    } else {
-      _clientSocket?.write(data);
-      _messages.add(message);
-    }
-  }
-
-  // استقبال الرسائل
-  void _listenToSocket(
-    Socket socket,
-    void Function(String) onMessage,
-    void Function() onDisconnect,
-  ) {
-    socket
+    _clientSocket!
         .transform(utf8.decoder)
         .transform(const LineSplitter())
         .listen(
-      (line) {
-        try {
-          final decoded = jsonDecode(line);
-
-          if (decoded is String) {
-            onMessage(decoded);
-          }
-        } catch (_) {
-          onMessage(line);
-        }
+      (line) => _messages.add(line),
+      onDone: () {
+        isConnected = false;
+        _clientSocket = null;
       },
-      onDone: onDisconnect,
-      onError: (_) => onDisconnect(),
+      onError: (_) {
+        isConnected = false;
+        _clientSocket = null;
+      },
       cancelOnError: true,
+    );
+
+    _clientSocket!.write(
+      '${jsonEncode({
+        'type': 'hello',
+        'playerId': playerId,
+        'name': playerName,
+      })}\n',
     );
   }
 
-  // إغلاق الاتصالات
-  Future<void> _closeConnections() async {
-    await _server?.close();
-    _server = null;
+  void sendEvent(Map<String, dynamic> event) {
+    if (!isConnected) return;
 
-    for (final client in _clients.toList()) {
-      await client.close();
+    final data = Map<String, dynamic>.from(event);
+    data['senderId'] = playerId;
+
+    final encoded = '${jsonEncode(data)}\n';
+
+    if (isHost) {
+      _messages.add(jsonEncode(data));
+
+      for (final client in _clients.values.toList()) {
+        try {
+          client.write(encoded);
+        } catch (_) {}
+      }
+    } else {
+      _clientSocket?.write(encoded);
+    }
+  }
+
+  void sendMessage(String message) {
+    if (message.trim().isEmpty) return;
+
+    sendEvent({
+      'type': 'chat',
+      'message': message.trim(),
+    });
+  }
+
+  void _emit(Map<String, dynamic> event) {
+    final encoded = '${jsonEncode(event)}\n';
+
+    _messages.add(jsonEncode(event));
+
+    for (final client in _clients.values.toList()) {
+      try {
+        client.write(encoded);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _closeConnections() async {
+    isConnected = false;
+    isHost = false;
+
+    for (final subscription in _subscriptions.values.toList()) {
+      await subscription.cancel();
+    }
+
+    _subscriptions.clear();
+
+    for (final client in _clients.values.toList()) {
+      client.destroy();
     }
 
     _clients.clear();
+    _socketPlayers.clear();
+    players.clear();
 
     await _clientSocket?.close();
     _clientSocket = null;
 
-    isConnected = false;
+    await _server?.close();
+    _server = null;
+
+    hostIp = null;
   }
 
-  // إنهاء الغرفة
   void dispose() {
-    isHost = false;
-    hostIp = null;
-
     unawaited(_disposeAsync());
   }
 
@@ -203,4 +298,5 @@ class RoomManager {
       await _messages.close();
     }
   }
-}
+                    }
+                    
