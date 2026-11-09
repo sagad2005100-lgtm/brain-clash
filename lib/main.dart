@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'game_page.dart';
+import 'multiplayer_page.dart';
 
 void main() {
   runApp(const BrainClash());
@@ -29,6 +30,36 @@ class BrainClash extends StatelessWidget {
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
+  Widget menuButton(
+    BuildContext context,
+    String title,
+    IconData icon,
+    VoidCallback action,
+  ) {
+    return SizedBox(
+      width: double.infinity,
+      height: 60,
+      child: ElevatedButton.icon(
+        onPressed: action,
+        icon: Icon(icon),
+        label: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFD6AE55),
+          foregroundColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,31 +105,33 @@ class HomePage extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 55),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 60,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD6AE55),
-                        foregroundColor: Colors.black,
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const GamePage(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'ابدأ اللعب',
-                        style: TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.bold,
+                  const SizedBox(height: 50),
+                  menuButton(
+                    context,
+                    'اللعب الفردي',
+                    Icons.person,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const GamePage(),
                         ),
-                      ),
-                    ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  menuButton(
+                    context,
+                    'اللعب الجماعي',
+                    Icons.people,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MultiplayerPage(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
