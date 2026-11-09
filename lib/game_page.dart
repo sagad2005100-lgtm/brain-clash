@@ -1,23 +1,25 @@
+
 import 'package:flutter/material.dart';
 import 'game_engine.dart';
 import 'stage_progress.dart';
 import 'stage_questions.dart';
 
+const Color gold = Color(0xFFD6AE55);
+const Color navy = Color(0xFF080D1B);
+const Color panel = Color(0xFF172442);
+
 class GamePage extends StatefulWidget {
   final int stageNumber;
 
-  const GamePage({
-    super.key,
-    this.stageNumber = 1,
-  });
+  const GamePage({super.key, this.stageNumber = 1});
 
   @override
   State<GamePage> createState() => _GamePageState();
 }
 
 class _GamePageState extends State<GamePage> {
+  late final List<Question> stageQuestions;
   late GameEngine engine;
-  late List questions;
 
   bool answered = false;
   bool? lastResult;
@@ -28,25 +30,23 @@ class _GamePageState extends State<GamePage> {
   void initState() {
     super.initState();
 
-    questions = StageQuestions.getQuestions(widget.stageNumber);
+    stageQuestions = StageQuestions.getQuestions(widget.stageNumber);
 
-    if (questions.isEmpty) {
-      return;
+    engine = GameEngine(questions: stageQuestions);
+
+    if (stageQuestions.isNotEmpty) {
+      _startTimer();
     }
-
-    engine = GameEngine(questions: questions);
-    startTimer();
   }
 
-  void startTimer() {
+  void _startTimer() {
     engine.startTimer(
       onTimeUp: () {
-        if (mounted) {
-          setState(() {
-            answered = true;
-            lastResult = false;
-          });
-        }
+        if (!mounted) return;
+        setState(() {
+          answered = true;
+          lastResult = false;
+        });
       },
       onTick: (_) {
         if (mounted) setState(() {});
@@ -54,7 +54,7 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  void answer(int index) {
+  void _answer(int index) {
     if (answered) return;
 
     final result = engine.answer(index);
@@ -66,8 +66,8 @@ class _GamePageState extends State<GamePage> {
     });
   }
 
-  void nextQuestion() {
-    if (engine.isFinished) return;
+  void _next() {
+    if (!answered) return;
 
     final moved = engine.nextQuestion();
 
@@ -82,44 +82,36 @@ class _GamePageState extends State<GamePage> {
       selectedAnswer = null;
     });
 
-    startTimer();
+    _startTimer();
   }
 
-  Future<void> saveProgress() async {
+  Future<void> _saveProgress() async {
     if (progressSaved) return;
-
     progressSaved = true;
 
     final stars = StageProgress.starsForCorrectAnswers(
       engine.correctAnswers,
-      questions.length,
+      stageQuestions.length,
     );
 
-    await StageProgress.saveStars(
-      widget.stageNumber,
-      stars,
-    );
+    await StageProgress.saveStars(widget.stageNumber, stars);
   }
 
   @override
   void dispose() {
-    if (questions.isNotEmpty) {
-      engine.dispose();
-    }
+    engine.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (questions.isEmpty) {
+    if (stageQuestions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text('المرحلة ${widget.stageNumber}'),
-        ),
+        appBar: AppBar(title: Text('المرحلة ${widget.stageNumber}')),
         body: const Center(
           child: Text(
-            'أسئلة هذه المرحلة قيد الإعداد',
-            style: TextStyle(fontSize: 20),
+            'أسئلة هذه المرحلة لم تُضف بعد',
+            style: TextStyle(fontSize: 19),
           ),
         ),
       );
@@ -127,12 +119,20 @@ class _GamePageState extends State<GamePage> {
 
     if (engine.isFinished) {
       return FutureBuilder<void>(
-        future: saveProgress(),
-        builder: (context, snapshot) => resultPage(),
+        future: _saveProgress(),
+        builder: (context, snapshot) {
+          return _resultPage();
+        },
       );
     }
 
-    final question = engine.currentQuestion!;
+    final question = engine.currentQuestion;
+
+    if (question == null) {
+      return const Scaffold(
+        body: Center(child: Text('لا توجد أسئلة')),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -148,12 +148,12 @@ class _GamePageState extends State<GamePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  info('النقاط', '${engine.score}'),
-                  info(
+                  _info('النقاط', '${engine.score}'),
+                  _info(
                     'السؤال',
-                    '${engine.currentIndex + 1}/${questions.length}',
+                    '${engine.currentIndex + 1}/${stageQuestions.length}',
                   ),
-                  info('الوقت', '${engine.remainingSeconds}'),
+                  _info('الوقت', '${engine.remainingSeconds}'),
                 ],
               ),
               const SizedBox(height: 20),
@@ -162,28 +162,27 @@ class _GamePageState extends State<GamePage> {
                 child: LinearProgressIndicator(
                   value: engine.progress,
                   minHeight: 9,
-                  color: const Color(0xFFFFC857),
+                  color: gold,
                   backgroundColor: Colors.white12,
                 ),
               ),
-              const SizedBox(height: 25),
+              const SizedBox(height: 20),
               Text(
                 question.category,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xFFFFC857),
-                  fontSize: 17,
+                  color: gold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(23),
+                padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF121D33),
+                  color: panel,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color(0xFFFFC857),
-                  ),
+                  border: Border.all(color: gold),
                 ),
                 child: Text(
                   question.question,
@@ -199,7 +198,7 @@ class _GamePageState extends State<GamePage> {
                 final correct = index == question.correctAnswer;
                 final selected = index == selectedAnswer;
 
-                Color color = const Color(0xFF172442);
+                Color color = panel;
 
                 if (answered && correct) {
                   color = Colors.green.shade800;
@@ -210,12 +209,14 @@ class _GamePageState extends State<GamePage> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 11),
                   child: SizedBox(
-                    height: 57,
+                    height: 55,
                     child: ElevatedButton(
-                      onPressed: answered ? null : () => answer(index),
+                      onPressed: answered ? null : () => _answer(index),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: color,
                         foregroundColor: Colors.white,
+                        disabledBackgroundColor: color,
+                        disabledForegroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -229,32 +230,34 @@ class _GamePageState extends State<GamePage> {
                 );
               }),
               const Spacer(),
-              if (answered) ...[
+              if (answered)
                 Text(
                   lastResult == true
-                      ? 'إجابة صحيحة! أحسنت'
-                      : 'إجابة خاطئة!',
+                      ? 'إجابة صحيحة!'
+                      : 'إجابة خاطئة أو انتهى الوقت',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 19,
                     color: lastResult == true
                         ? Colors.greenAccent
                         : Colors.orangeAccent,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
-              ],
+              const SizedBox(height: 10),
               SizedBox(
-                height: 55,
+                height: 54,
                 child: ElevatedButton(
-                  onPressed: answered ? nextQuestion : null,
+                  onPressed: answered ? _next : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFC857),
-                    foregroundColor: Colors.black,
+                    backgroundColor: gold,
+                    foregroundColor: navy,
                   ),
-                  child: const Text(
-                    'السؤال التالي',
-                    style: TextStyle(
+                  child: Text(
+                    engine.currentIndex + 1 == stageQuestions.length
+                        ? 'إنهاء المرحلة'
+                        : 'السؤال التالي',
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -268,43 +271,43 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
-  Widget info(String title, String value) {
+  Widget _info(String title, String value) {
     return Column(
       children: [
-        Text(title, style: const TextStyle(color: Colors.white60)),
+        Text(title, style: const TextStyle(color: Colors.white70)),
         const SizedBox(height: 5),
         Text(
           value,
           style: const TextStyle(
-            color: Color(0xFFFFC857),
+            color: gold,
+            fontSize: 19,
             fontWeight: FontWeight.bold,
-            fontSize: 18,
           ),
         ),
       ],
     );
   }
 
-  Widget resultPage() {
+  Widget _resultPage() {
     final stars = StageProgress.starsForCorrectAnswers(
       engine.correctAnswers,
-      questions.length,
+      stageQuestions.length,
     );
 
     return Scaffold(
       appBar: AppBar(title: const Text('النتيجة النهائية')),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(25),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
                 Icons.emoji_events,
-                color: Color(0xFFFFC857),
-                size: 100,
+                color: gold,
+                size: 95,
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 18),
               const Text(
                 'انتهت المرحلة!',
                 style: TextStyle(
@@ -314,19 +317,29 @@ class _GamePageState extends State<GamePage> {
               ),
               const SizedBox(height: 15),
               Text(
-                '⭐' * stars + '☆' * (3 - stars),
-                style: const TextStyle(fontSize: 35),
+                '⭐' * stars,
+                style: const TextStyle(fontSize: 38),
               ),
-              const SizedBox(height: 20),
-              Text('النقاط: ${engine.score}'),
+              const SizedBox(height: 15),
+              Text(
+                'النقاط: ${engine.score}',
+                style: const TextStyle(color: gold, fontSize: 24),
+              ),
               Text('الإجابات الصحيحة: ${engine.correctAnswers}'),
               Text('الإجابات الخاطئة: ${engine.wrongAnswers}'),
-              const SizedBox(height: 25),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('العودة للمراحل'),
+              Text('عدد الأسئلة: ${stageQuestions.length}'),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: gold,
+                    foregroundColor: navy,
+                  ),
+                  child: const Text('العودة إلى المراحل'),
+                ),
               ),
             ],
           ),
