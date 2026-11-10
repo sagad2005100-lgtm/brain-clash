@@ -1,17 +1,16 @@
 
 import 'package:flutter/material.dart';
-import 'game_page.dart';
-import 'multiplayer_page.dart';
-import 'stage_progress.dart';
-import 'stage_questions.dart';
-
-const gold = Color(0xFFFFC857);
-const navy = Color(0xFF080D1B);
-const panel = Color(0xFF121D33);
+import 'package:shared_preferences/shared_preferences.dart';
+import 'mini_game_page.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const BrainClashApp());
 }
+
+const gold = Color(0xFFFFC857);
+const background = Color(0xFF10121C);
+const panel = Color(0xFF1D2233);
 
 class BrainClashApp extends StatelessWidget {
   const BrainClashApp({super.key});
@@ -22,84 +21,251 @@ class BrainClashApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Brain Clash',
       theme: ThemeData(
-        useMaterial3: true,
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: navy,
+        scaffoldBackgroundColor: background,
         colorScheme: ColorScheme.fromSeed(
           seedColor: gold,
           brightness: Brightness.dark,
         ),
+        fontFamily: 'Arial',
       ),
       home: const HomePage(),
     );
   }
 }
 
-class HomePage extends StatelessWidget {
+class World {
+  final String name;
+  final String subtitle;
+  final String emoji;
+  final Color color;
+
+  const World(this.name, this.subtitle, this.emoji, this.color);
+}
+
+const worlds = [
+  World('عالم الذاكرة', 'اختبر قوة ذاكرتك', '🧠', Color(0xFF7667E8)),
+  World('عالم الرياضيات', 'تحديات الأرقام والحساب', '🔢', Color(0xFF279CDA)),
+  World('عالم الكلمات', 'اكتشف الكلمات والألغاز', '🔤', Color(0xFFDB8B42)),
+  World('عالم المنطق', 'فكر خارج الصندوق', '🧩', Color(0xFF29A68A)),
+  World('عالم التركيز', 'لاحظ التفاصيل بسرعة', '👁️', Color(0xFFD65D83)),
+  World('عالم الأشكال', 'اختبر تفكيرك البصري', '🔷', Color(0xFF8C72D9)),
+  World('عالم الاستراتيجية', 'خطط لكل حركة', '♟️', Color(0xFFB28A43)),
+  World('عالم المعلومات', 'اختبر معلوماتك العامة', '🌍', Color(0xFF3C9D77)),
+];
+
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  void open(BuildContext context, Widget page) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => page),
-    );
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int completed = 0;
+  int totalStars = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    loadProgress();
+  }
+
+  Future<void> loadProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    int stages = 0;
+    int stars = 0;
+
+    for (int w = 1; w <= 8; w++) {
+      for (int s = 1; s <= 100; s++) {
+        final value = prefs.getInt('world_${w}_stage_$s') ?? 0;
+        if (value > 0) stages++;
+        stars += value;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      completed = stages;
+      totalStars = stars;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        child: RefreshIndicator(
+          onRefresh: loadProgress,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
             children: [
-              const Icon(
-                Icons.psychology_alt,
-                color: gold,
-                size: 95,
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: gold.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: const Icon(Icons.psychology, color: gold, size: 30),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'BRAIN CLASH',
+                          style: TextStyle(
+                            fontSize: 21,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        Text(
+                          'صراع العقول',
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.settings, color: Colors.white54),
+                ],
               ),
-              const SizedBox(height: 15),
-              const Text(
-                'BRAIN CLASH',
-                style: TextStyle(
-                  color: gold,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
+              const SizedBox(height: 28),
+              Container(
+                padding: const EdgeInsets.all(23),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF34304F), Color(0xFF202538)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'هل أنت مستعد للتحدي؟',
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'درّب عقلك، واجمع النجوم، وكن بطل العقول.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _statCard(
+                            Icons.flag,
+                            '$completed / 800',
+                            'مرحلة مكتملة',
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statCard(
+                            Icons.star,
+                            '$totalStars',
+                            'نجمة',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 28),
               const Text(
-                'صراع العقول',
-                style: TextStyle(fontSize: 20),
+                'اختر عالمك',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 45),
-              _button(
-                context,
-                'ابدأ اللعب',
-                Icons.play_arrow,
-                () => open(context, const StagePage()),
+              const SizedBox(height: 6),
+              const Text(
+                'ثمانية عوالم تنتظرك لاختبار قدراتك',
+                style: TextStyle(color: Colors.white54),
               ),
-              const SizedBox(height: 15),
-              _button(
-                context,
-                'اللعب الجماعي',
-                Icons.groups,
-                () => open(context, const MultiplayerPage()),
-              ),
-              const SizedBox(height: 15),
-              _button(
-                context,
-                'الإعدادات',
-                Icons.settings,
-                () {
-                  showAboutDialog(
-                    context: context,
-                    applicationName: 'Brain Clash',
-                    applicationVersion: '1.0.0',
-                    applicationLegalese: 'صراع العقول',
+              const SizedBox(height: 17),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: worlds.length,
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.12,
+                ),
+                itemBuilder: (context, index) {
+                  final world = worlds[index];
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StagePage(worldIndex: index + 1),
+                        ),
+                      );
+                      loadProgress();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        color: panel,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: world.color.withOpacity(0.5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(world.emoji, style: const TextStyle(fontSize: 34)),
+                          const SizedBox(height: 9),
+                          Text(
+                            world.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            world.subtitle,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 9),
+                          Text(
+                            '100 مرحلة',
+                            style: TextStyle(
+                              color: world.color,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 },
+              ),
+              const SizedBox(height: 20),
+              const Center(
+                child: Text(
+                  'BRAIN CLASH • TRAIN YOUR MIND',
+                  style: TextStyle(color: Colors.white30, fontSize: 11),
+                ),
               ),
             ],
           ),
@@ -108,237 +274,216 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _button(
-    BuildContext context,
-    String title,
-    IconData icon,
-    VoidCallback action,
-  ) {
-    return SizedBox(
-      width: double.infinity,
-      height: 62,
-      child: ElevatedButton.icon(
-        onPressed: action,
-        icon: Icon(icon, color: gold),
-        label: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 19,
-            fontWeight: FontWeight.bold,
+  Widget _statCard(IconData icon, String value, String label) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: gold, size: 25),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white60,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: panel,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(17),
-          ),
-        ),
+        ],
       ),
     );
   }
 }
 
 class StagePage extends StatefulWidget {
-  const StagePage({super.key});
+  final int worldIndex;
+
+  const StagePage({super.key, required this.worldIndex});
 
   @override
   State<StagePage> createState() => _StagePageState();
 }
 
 class _StagePageState extends State<StagePage> {
-  late Future<List<int>> starsFuture;
-  late Future<int> unlockedFuture;
+  Map<int, int> progress = {};
+  bool loading = true;
+
+  World get world => worlds[widget.worldIndex - 1];
 
   @override
   void initState() {
     super.initState();
-    refreshProgress();
+    loadStages();
   }
 
-  void refreshProgress() {
-    starsFuture = StageProgress.loadStars();
-    unlockedFuture = StageProgress.unlockedStage();
+  Future<void> loadStages() async {
+    final prefs = await SharedPreferences.getInstance();
+    final values = <int, int>{};
+
+    for (int i = 1; i <= 100; i++) {
+      values[i] = prefs.getInt('world_${widget.worldIndex}_stage_$i') ?? 0;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      progress = values;
+      loading = false;
+    });
+  }
+
+  int get unlockedStage {
+    for (int i = 1; i <= 100; i++) {
+      if ((progress[i] ?? 0) == 0) return i;
+    }
+    return 100;
   }
 
   Future<void> openStage(int stage) async {
-    final unlocked = await StageProgress.unlockedStage();
+    if (stage > unlockedStage && (progress[stage] ?? 0) == 0) return;
 
-    if (!mounted) return;
-
-    if (stage > unlocked) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('أكمل المرحلة السابقة أولاً!'),
-        ),
-      );
-      return;
-    }
-
-    if (!StageQuestions.isReady(stage)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('أسئلة هذه المرحلة غير متوفرة حالياً'),
-        ),
-      );
-      return;
-    }
-
-    await Navigator.push(
+    final result = await Navigator.push<int>(
       context,
       MaterialPageRoute(
-        builder: (_) => GamePage(stageNumber: stage),
+        builder: (_) => MiniGamePage(
+          world: widget.worldIndex,
+          stage: stage,
+        ),
       ),
     );
 
-    if (mounted) {
-      setState(refreshProgress);
+    if (result == null) return;
+
+    final stars = result >= 8 ? 3 : result >= 5 ? 2 : result >= 3 ? 1 : 0;
+    if (stars == 0) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'world_${widget.worldIndex}_stage_$stage';
+    final previous = prefs.getInt(key) ?? 0;
+
+    if (stars > previous) {
+      await prefs.setInt(key, stars);
     }
+
+    await loadStages();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('خريطة المراحل'),
-        centerTitle: true,
+        title: Text(world.name),
+        backgroundColor: background,
       ),
-      body: FutureBuilder<List<int>>(
-        future: starsFuture,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(color: gold),
-            );
-          }
-
-          final stars = snapshot.data!;
-
-          return FutureBuilder<int>(
-            future: unlockedFuture,
-            builder: (context, unlockedSnapshot) {
-              if (!unlockedSnapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(color: gold),
-                );
-              }
-
-              final unlocked = unlockedSnapshot.data!;
-
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: panel,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'تقدمك في اللعبة',
-                            style: TextStyle(fontSize: 17),
-                          ),
-                          Text(
-                            '$unlocked / 20',
-                            style: const TextStyle(
-                              color: gold,
-                              fontSize: 21,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: StageQuestions.totalStages,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
-                        childAspectRatio: 1.25,
-                      ),
-                      itemBuilder: (context, index) {
-                        final stage = index + 1;
-                        final isUnlocked = stage <= unlocked;
-                        final stageStars = stars[index];
-                        final questionCount =
-                            StageQuestions.getQuestions(stage).length;
-
-                        return InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => openStage(stage),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: panel,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isUnlocked
-                                    ? gold
-                                    : Colors.white12,
-                                width: 1.5,
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: gold))
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      Text(world.emoji, style: const TextStyle(fontSize: 35)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              world.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  isUnlocked
-                                      ? Icons.emoji_events
-                                      : Icons.lock,
-                                  size: 37,
-                                  color: isUnlocked
-                                      ? gold
-                                      : Colors.white38,
+                            const Text(
+                              'أكمل المراحل لتحصل على النجوم',
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: 100,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemBuilder: (context, index) {
+                      final stage = index + 1;
+                      final stars = progress[stage] ?? 0;
+                      final locked =
+                          stage > unlockedStage && stars == 0;
+
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: locked ? null : () => openStage(stage),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: locked ? Colors.white10 : panel,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: stars > 0
+                                  ? gold.withOpacity(0.7)
+                                  : Colors.white12,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                locked ? Icons.lock : Icons.extension,
+                                color: locked ? Colors.white30 : gold,
+                                size: 23,
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                '$stage',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
                                 ),
-                                const SizedBox(height: 8),
+                              ),
+                              if (stars > 0)
                                 Text(
-                                  'المرحلة $stage',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 17,
-                                  ),
-                                ),
-                                const SizedBox(height: 7),
-                                Text(
-                                  isUnlocked
-                                      ? '⭐' * stageStars +
-                                          '☆' * (3 - stageStars)
-                                      : 'مقفلة',
+                                  '★' * stars,
                                   style: const TextStyle(
                                     color: gold,
-                                    fontSize: 17,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '$questionCount سؤال',
-                                  style: const TextStyle(
-                                    color: Colors.white54,
                                     fontSize: 12,
                                   ),
                                 ),
-                              ],
-                            ),
+                            ],
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                ],
-              );
-            },
-          );
-        },
-      ),
+                ),
+              ],
+            ),
     );
   }
 }
