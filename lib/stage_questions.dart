@@ -1,8 +1,9 @@
+
 import 'questions.dart';
 
 class StageQuestions {
   static const int totalStages = 20;
-  static const int questionsPerStage = 100;
+  static const int questionsPerStage = 20;
 
   static List<Question> getQuestions(int stage) {
     switch (stage) {
@@ -18,7 +19,8 @@ class StageQuestions {
   }
 
   static bool isReady(int stage) {
-    return getQuestions(stage).length >= questionsPerStage;
+    final list = getQuestions(stage);
+    return list.length >= questionsPerStage;
   }
 
   static Question q(
