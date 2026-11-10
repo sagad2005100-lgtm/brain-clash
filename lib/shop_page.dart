@@ -1,10 +1,11 @@
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'reward_manager.dart';
 
 const shopGold = Color(0xFFFFC857);
 const shopBackground = Color(0xFF10121C);
-const shopPanel = Color(0xFF1D2233;
+const shopPanel = Color(0xFF1D2233);
 
 class ShopPage extends StatefulWidget {
   const ShopPage({super.key});
@@ -15,30 +16,52 @@ class ShopPage extends StatefulWidget {
 
 class _ShopPageState extends State<ShopPage> {
   int coins = 0;
+  int hints = 0;
+  int extraLives = 0;
 
   @override
   void initState() {
     super.initState();
-    loadCoins();
+    loadShop();
   }
 
-  Future<void> loadCoins() async {
-    final value = await RewardManager.getCoins();
+  Future<void> loadShop() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final c = await RewardManager.getCoins();
+    final h = prefs.getInt('inventory_hints') ?? 0;
+    final l = prefs.getInt('inventory_extra_lives') ?? 0;
+
     if (!mounted) return;
-    setState(() => coins = value);
+
+    setState(() {
+      coins = c;
+      hints = h;
+      extraLives = l;
+    });
   }
 
-  Future<void> buyHint() async {
-    final success = await RewardManager.spendCoins(50);
+  Future<void> buyItem({
+    required int price,
+    required String inventoryKey,
+    required String itemName,
+  }) async {
+    final success = await RewardManager.spendCoins(price);
 
     if (!mounted) return;
 
     if (success) {
-      await loadCoins();
+      final prefs = await SharedPreferences.getInstance();
+      final count = prefs.getInt(inventoryKey) ?? 0;
+
+      await prefs.setInt(inventoryKey, count + 1);
+
+      await loadShop();
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم شراء تلميح بنجاح! 💡'),
-        ),
+        SnackBar(content: Text('تم شراء $itemName بنجاح! 🎉')),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -57,63 +80,79 @@ class _ShopPageState extends State<ShopPage> {
         title: const Text('المتجر'),
         backgroundColor: shopBackground,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: shopPanel,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.monetization_on,
-                    color: shopGold, size: 35),
-                const SizedBox(width: 12),
-                const Text('رصيدك',
-                    style: TextStyle(fontSize: 18)),
-                const Spacer(),
-                Text('$coins',
+      body: RefreshIndicator(
+        onRefresh: loadShop,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: shopPanel,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.monetization_on,
+                      color: shopGold, size: 35),
+                  const SizedBox(width: 12),
+                  const Text('رصيدك', style: TextStyle(fontSize: 18)),
+                  const Spacer(),
+                  Text(
+                    '$coins',
                     style: const TextStyle(
-                        color: shopGold,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold)),
-              ],
+                      color: shopGold,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 25),
-          const Text('العناصر المتاحة',
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 15),
-          itemCard(
-            emoji: '💡',
-            title: 'تلميح ذكي',
-            description: 'احصل على مساعدة أثناء التحديات',
-            price: 50,
-            onBuy: buyHint,
-          ),
-          itemCard(
-            emoji: '❤️',
-            title: 'محاولة إضافية',
-            description: 'عنصر للمحاولات الإضافية مستقبلاً',
-            price: 100,
-            onBuy: () async {
-              final success = await RewardManager.spendCoins(100);
-              if (!mounted) return;
-              await loadCoins();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(success
-                      ? 'تم شراء المحاولة الإضافية!'
-                      : 'رصيدك غير كافي!'),
-                ),
-              );
-            },
-          ),
-        ],
+
+            const SizedBox(height: 25),
+
+            const Text(
+              'العناصر المتاحة',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 15),
+
+            itemCard(
+              emoji: '💡',
+              title: 'تلميح ذكي',
+              description: 'مساعدات أثناء التحديات • لديك $hints',
+              price: 50,
+              onBuy: () => buyItem(
+                price: 50,
+                inventoryKey: 'inventory_hints',
+                itemName: 'التلميح',
+              ),
+            ),
+
+            itemCard(
+              emoji: '❤️',
+              title: 'محاولة إضافية',
+              description: 'محاولات إضافية • لديك $extraLives',
+              price: 100,
+              onBuy: () => buyItem(
+                price: 100,
+                inventoryKey: 'inventory_extra_lives',
+                itemName: 'المحاولة الإضافية',
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            const Center(
+              child: Text(
+                'BRAIN CLASH SHOP',
+                style: TextStyle(color: Colors.white30),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -143,18 +182,17 @@ class _ShopPageState extends State<ShopPage> {
               children: [
                 Text(title,
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17)),
+                        fontWeight: FontWeight.bold, fontSize: 17)),
                 const SizedBox(height: 5),
                 Text(description,
                     style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12)),
+                        color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 8),
-                Text('$price 🪙',
-                    style: const TextStyle(
-                        color: shopGold,
-                        fontWeight: FontWeight.bold)),
+                Text(
+                  '$price 🪙',
+                  style: const TextStyle(
+                      color: shopGold, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ),
@@ -171,4 +209,3 @@ class _ShopPageState extends State<ShopPage> {
     );
   }
 }
-                        
