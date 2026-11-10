@@ -54,7 +54,11 @@ class HomePage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.psychology_alt, color: gold, size: 95),
+              const Icon(
+                Icons.psychology_alt,
+                color: gold,
+                size: 95,
+              ),
               const SizedBox(height: 15),
               const Text(
                 'BRAIN CLASH',
@@ -65,7 +69,10 @@ class HomePage extends StatelessWidget {
                   letterSpacing: 2,
                 ),
               ),
-              const Text('صراع العقول', style: TextStyle(fontSize: 20)),
+              const Text(
+                'صراع العقول',
+                style: TextStyle(fontSize: 20),
+              ),
               const SizedBox(height: 45),
               _button(
                 context,
@@ -274,7 +281,9 @@ class _StagePageState extends State<StagePage> {
                               color: panel,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: isUnlocked ? gold : Colors.white12,
+                                color: isUnlocked
+                                    ? gold
+                                    : Colors.white12,
                                 width: 1.5,
                               ),
                             ),
@@ -327,10 +336,9 @@ class _StagePageState extends State<StagePage> {
                 ],
               );
             },
-          ),
-        ),
+          );
+        },
       ),
     );
   }
-        }
-        
+}
