@@ -1,3 +1,4 @@
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StageProgress {
@@ -8,22 +9,27 @@ class StageProgress {
 
     return List.generate(
       totalStages,
-      (i) => prefs.getInt('stage_${i + 1}') ?? 0,
+      (index) => prefs.getInt('stage_${index + 1}') ?? 0,
     );
   }
 
   static Future<void> saveStars(int stage, int stars) async {
+    if (stage < 1 || stage > totalStages) return;
+
     final prefs = await SharedPreferences.getInstance();
     final key = 'stage_$stage';
-    final oldStars = prefs.getInt(key) ?? 0;
 
-    if (stars > oldStars) {
-      await prefs.setInt(key, stars);
+    final oldStars = prefs.getInt(key) ?? 0;
+    final newStars = stars.clamp(0, 3);
+
+    if (newStars > oldStars) {
+      await prefs.setInt(key, newStars);
     }
   }
 
   static Future<int> unlockedStage() async {
     final stars = await loadStars();
+
     int unlocked = 1;
 
     for (int i = 0; i < stars.length; i++) {
@@ -38,7 +44,7 @@ class StageProgress {
   }
 
   static int starsForCorrectAnswers(int correct, int total) {
-    if (total == 0) return 0;
+    if (total <= 0) return 0;
 
     final ratio = correct / total;
 
