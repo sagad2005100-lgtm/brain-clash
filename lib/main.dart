@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'mini_game_page.dart';
 import 'reward_manager.dart';
+import 'shop_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -102,6 +103,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> openShop() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ShopPage()),
+    );
+    await loadProgress();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -137,13 +146,16 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
-                  const Icon(Icons.settings, color: Colors.white54),
+                  IconButton(
+                    onPressed: openShop,
+                    tooltip: 'المتجر',
+                    icon: const Icon(Icons.storefront, color: gold, size: 30),
+                  ),
                 ],
               ),
 
               const SizedBox(height: 25),
 
-              // بطاقة اللاعب
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -211,6 +223,43 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              // زر المتجر
+              InkWell(
+                onTap: openShop,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6652B8), Color(0xFF342A66)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.storefront, size: 35, color: gold),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('متجر صراع العقول',
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold)),
+                            Text('اشترِ التلميحات والمساعدات',
+                                style: TextStyle(color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios, color: Colors.white70),
+                    ],
+                  ),
                 ),
               ),
 
@@ -532,22 +581,4 @@ class _StagePageState extends State<StagePage> {
                               ),
                               const SizedBox(height: 5),
                               Text('$stage',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16)),
-                              if (stars > 0)
-                                Text('★' * stars,
-                                    style: const TextStyle(
-                                        color: gold, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-}
+                   
