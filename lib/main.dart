@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'mini_game_page.dart';
+import 'reward_manager.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,14 +21,12 @@ class BrainClashApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Brain Clash',
-      theme: ThemeData(
-        brightness: Brightness.dark,
+      theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: background,
         colorScheme: ColorScheme.fromSeed(
           seedColor: gold,
           brightness: Brightness.dark,
         ),
-        fontFamily: 'Arial',
       ),
       home: const HomePage(),
     );
@@ -64,6 +63,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int completed = 0;
   int totalStars = 0;
+  int coins = 0;
+  int xp = 0;
+  int playerLevel = 1;
 
   @override
   void initState() {
@@ -73,6 +75,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
+
     int stages = 0;
     int stars = 0;
 
@@ -84,10 +87,18 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    final c = await RewardManager.getCoins();
+    final x = await RewardManager.getXP();
+    final level = await RewardManager.getPlayerLevel();
+
     if (!mounted) return;
+
     setState(() {
       completed = stages;
       totalStars = stars;
+      coins = c;
+      xp = x;
+      playerLevel = level;
     });
   }
 
@@ -116,84 +127,136 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'BRAIN CLASH',
-                          style: TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        Text(
-                          'صراع العقول',
-                          style: TextStyle(color: Colors.white54),
-                        ),
+                        Text('BRAIN CLASH',
+                            style: TextStyle(
+                                fontSize: 21,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.5)),
+                        Text('صراع العقول',
+                            style: TextStyle(color: Colors.white54)),
                       ],
                     ),
                   ),
                   const Icon(Icons.settings, color: Colors.white54),
                 ],
               ),
-              const SizedBox(height: 28),
+
+              const SizedBox(height: 25),
+
+              // بطاقة اللاعب
               Container(
-                padding: const EdgeInsets.all(23),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(23),
                   gradient: const LinearGradient(
                     colors: [Color(0xFF34304F), Color(0xFF202538)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
                   ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Color(0xFFFFC857),
+                          child: Icon(Icons.person, color: Colors.black, size: 30),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('اللاعب',
+                                  style: TextStyle(color: Colors.white54)),
+                              Text('المستوى $playerLevel',
+                                  style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          children: [
+                            const Icon(Icons.monetization_on,
+                                color: gold, size: 28),
+                            Text('$coins',
+                                style: const TextStyle(
+                                    color: gold,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        const Icon(Icons.bolt, color: Colors.orangeAccent),
+                        const SizedBox(width: 6),
+                        Text('$xp XP',
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        Text('${xp % 100}/100',
+                            style: const TextStyle(color: Colors.white54)),
+                      ],
+                    ),
+                    const SizedBox(height: 9),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: (xp % 100) / 100,
+                        minHeight: 8,
+                        color: gold,
+                        backgroundColor: Colors.white12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  color: panel,
+                  borderRadius: BorderRadius.circular(22),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'هل أنت مستعد للتحدي؟',
-                      style: TextStyle(
-                        fontSize: 23,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    const Text('هل أنت مستعد للتحدي؟',
+                        style: TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    const Text(
-                      'درّب عقلك، واجمع النجوم، وكن بطل العقول.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
+                    const Text('درّب عقلك واجمع النجوم.',
+                        style: TextStyle(color: Colors.white70)),
                     const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
                           child: _statCard(
-                            Icons.flag,
-                            '$completed / 800',
-                            'مرحلة مكتملة',
-                          ),
+                              Icons.flag, '$completed / 800', 'مرحلة مكتملة'),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: _statCard(
-                            Icons.star,
-                            '$totalStars',
-                            'نجمة',
-                          ),
+                              Icons.star, '$totalStars', 'نجمة'),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
+
               const SizedBox(height: 28),
-              const Text(
-                'اختر عالمك',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
+              const Text('اختر عالمك',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
-              const Text(
-                'ثمانية عوالم تنتظرك لاختبار قدراتك',
-                style: TextStyle(color: Colors.white54),
-              ),
+              const Text('ثمانية عوالم تنتظرك',
+                  style: TextStyle(color: Colors.white54)),
               const SizedBox(height: 17),
+
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -207,6 +270,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 itemBuilder: (context, index) {
                   final world = worlds[index];
+
                   return InkWell(
                     borderRadius: BorderRadius.circular(20),
                     onTap: () async {
@@ -216,56 +280,47 @@ class _HomePageState extends State<HomePage> {
                           builder: (_) => StagePage(worldIndex: index + 1),
                         ),
                       );
-                      loadProgress();
+                      await loadProgress();
                     },
                     child: Container(
                       padding: const EdgeInsets.all(15),
                       decoration: BoxDecoration(
                         color: panel,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: world.color.withOpacity(0.5)),
+                        border: Border.all(
+                            color: world.color.withOpacity(0.5)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(world.emoji, style: const TextStyle(fontSize: 34)),
+                          Text(world.emoji,
+                              style: const TextStyle(fontSize: 34)),
                           const SizedBox(height: 9),
-                          Text(
-                            world.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
+                          Text(world.name,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16)),
                           const SizedBox(height: 4),
-                          Text(
-                            world.subtitle,
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                            ),
-                          ),
+                          Text(world.subtitle,
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 11)),
                           const SizedBox(height: 9),
-                          Text(
-                            '100 مرحلة',
-                            style: TextStyle(
-                              color: world.color,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          Text('100 مرحلة',
+                              style: TextStyle(
+                                  color: world.color,
+                                  fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                   );
                 },
               ),
+
               const SizedBox(height: 20),
               const Center(
-                child: Text(
-                  'BRAIN CLASH • TRAIN YOUR MIND',
-                  style: TextStyle(color: Colors.white30, fontSize: 11),
-                ),
+                child: Text('BRAIN CLASH • TRAIN YOUR MIND',
+                    style: TextStyle(color: Colors.white30, fontSize: 11)),
               ),
             ],
           ),
@@ -289,20 +344,12 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 11,
-                  ),
-                ),
+                Text(value,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 17)),
+                Text(label,
+                    style: const TextStyle(
+                        color: Colors.white60, fontSize: 11)),
               ],
             ),
           ),
@@ -314,7 +361,6 @@ class _HomePageState extends State<HomePage> {
 
 class StagePage extends StatefulWidget {
   final int worldIndex;
-
   const StagePage({super.key, required this.worldIndex});
 
   @override
@@ -338,7 +384,8 @@ class _StagePageState extends State<StagePage> {
     final values = <int, int>{};
 
     for (int i = 1; i <= 100; i++) {
-      values[i] = prefs.getInt('world_${widget.worldIndex}_stage_$i') ?? 0;
+      values[i] =
+          prefs.getInt('world_${widget.worldIndex}_stage_$i') ?? 0;
     }
 
     if (!mounted) return;
@@ -370,8 +417,13 @@ class _StagePageState extends State<StagePage> {
 
     if (result == null) return;
 
-    final stars = result >= 8 ? 3 : result >= 5 ? 2 : result >= 3 ? 1 : 0;
-    if (stars == 0) return;
+    final rewards = await RewardManager.completeStage(
+      widget.worldIndex,
+      stage,
+      result,
+    );
+
+    final stars = rewards['stars'] ?? 0;
 
     final prefs = await SharedPreferences.getInstance();
     final key = 'world_${widget.worldIndex}_stage_$stage';
@@ -382,15 +434,39 @@ class _StagePageState extends State<StagePage> {
     }
 
     await loadStages();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: panel,
+        title: const Text('مكافآت المرحلة'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('⭐ $stars نجوم',
+                style: const TextStyle(color: gold, fontSize: 22)),
+            const SizedBox(height: 12),
+            Text('🪙 ${rewards['coins']} عملة'),
+            const SizedBox(height: 8),
+            Text('⚡ ${rewards['xp']} XP'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('رائع!'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(world.name),
-        backgroundColor: background,
-      ),
+      appBar: AppBar(title: Text(world.name), backgroundColor: background),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: gold))
           : Column(
@@ -399,23 +475,19 @@ class _StagePageState extends State<StagePage> {
                   padding: const EdgeInsets.all(18),
                   child: Row(
                     children: [
-                      Text(world.emoji, style: const TextStyle(fontSize: 35)),
+                      Text(world.emoji,
+                          style: const TextStyle(fontSize: 35)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              world.name,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Text(
-                              'أكمل المراحل لتحصل على النجوم',
-                              style: TextStyle(color: Colors.white54),
-                            ),
+                            Text(world.name,
+                                style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold)),
+                            const Text('أكمل المراحل لتحصل على النجوم',
+                                style: TextStyle(color: Colors.white54)),
                           ],
                         ),
                       ),
@@ -435,8 +507,7 @@ class _StagePageState extends State<StagePage> {
                     itemBuilder: (context, index) {
                       final stage = index + 1;
                       final stars = progress[stage] ?? 0;
-                      final locked =
-                          stage > unlockedStage && stars == 0;
+                      final locked = stage > unlockedStage && stars == 0;
 
                       return InkWell(
                         borderRadius: BorderRadius.circular(16),
@@ -460,21 +531,14 @@ class _StagePageState extends State<StagePage> {
                                 size: 23,
                               ),
                               const SizedBox(height: 5),
-                              Text(
-                                '$stage',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              if (stars > 0)
-                                Text(
-                                  '★' * stars,
+                              Text('$stage',
                                   style: const TextStyle(
-                                    color: gold,
-                                    fontSize: 12,
-                                  ),
-                                ),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                              if (stars > 0)
+                                Text('★' * stars,
+                                    style: const TextStyle(
+                                        color: gold, fontSize: 12)),
                             ],
                           ),
                         ),
