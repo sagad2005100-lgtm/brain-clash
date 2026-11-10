@@ -1,3 +1,4 @@
+
 name: brain_clash
 description: Brain Clash Arabic and English Quiz Game
 publish_to: 'none'
@@ -9,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
@@ -16,3 +18,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
