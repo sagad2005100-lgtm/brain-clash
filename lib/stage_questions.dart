@@ -19,8 +19,7 @@ class StageQuestions {
   }
 
   static bool isReady(int stage) {
-    final list = getQuestions(stage);
-    return list.length >= questionsPerStage;
+    return getQuestions(stage).isNotEmpty;
   }
 
   static Question q(
