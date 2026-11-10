@@ -1,7 +1,9 @@
+
 import 'package:flutter/material.dart';
 import 'game_page.dart';
 import 'multiplayer_page.dart';
 import 'stage_progress.dart';
+import 'stage_questions.dart';
 
 const gold = Color(0xFFFFC857);
 const navy = Color(0xFF080D1B);
@@ -52,11 +54,7 @@ class HomePage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.psychology_alt,
-                color: gold,
-                size: 95,
-              ),
+              const Icon(Icons.psychology_alt, color: gold, size: 95),
               const SizedBox(height: 15),
               const Text(
                 'BRAIN CLASH',
@@ -67,10 +65,7 @@ class HomePage extends StatelessWidget {
                   letterSpacing: 2,
                 ),
               ),
-              const Text(
-                'صراع العقول',
-                style: TextStyle(fontSize: 20),
-              ),
+              const Text('صراع العقول', style: TextStyle(fontSize: 20)),
               const SizedBox(height: 45),
               _button(
                 context,
@@ -173,6 +168,15 @@ class _StagePageState extends State<StagePage> {
       return;
     }
 
+    if (!StageQuestions.isReady(stage)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('أسئلة هذه المرحلة غير متوفرة حالياً'),
+        ),
+      );
+      return;
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -247,7 +251,7 @@ class _StagePageState extends State<StagePage> {
                   Expanded(
                     child: GridView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: 20,
+                      itemCount: StageQuestions.totalStages,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -259,6 +263,8 @@ class _StagePageState extends State<StagePage> {
                         final stage = index + 1;
                         final isUnlocked = stage <= unlocked;
                         final stageStars = stars[index];
+                        final questionCount =
+                            StageQuestions.getQuestions(stage).length;
 
                         return InkWell(
                           borderRadius: BorderRadius.circular(20),
@@ -268,9 +274,7 @@ class _StagePageState extends State<StagePage> {
                               color: panel,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: isUnlocked
-                                    ? gold
-                                    : Colors.white12,
+                                color: isUnlocked ? gold : Colors.white12,
                                 width: 1.5,
                               ),
                             ),
@@ -306,9 +310,9 @@ class _StagePageState extends State<StagePage> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                const Text(
-                                  '100 سؤال',
-                                  style: TextStyle(
+                                Text(
+                                  '$questionCount سؤال',
+                                  style: const TextStyle(
                                     color: Colors.white54,
                                     fontSize: 12,
                                   ),
@@ -323,9 +327,10 @@ class _StagePageState extends State<StagePage> {
                 ],
               );
             },
-          );
-        },
+          ),
+        ),
       ),
     );
   }
-}
+        }
+        
