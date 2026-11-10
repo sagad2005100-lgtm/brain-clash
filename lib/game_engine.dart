@@ -21,13 +21,18 @@ class GameEngine {
     required this.questions,
     this.secondsPerQuestion = 15,
   }) {
-    remainingSeconds = secondsPerQuestion;
+    remainingSeconds = secondsPerQuestion > 0
+        ? secondsPerQuestion
+        : 15;
   }
 
   Question? get currentQuestion {
-    if (questions.isEmpty || currentIndex >= questions.length) {
+    if (questions.isEmpty ||
+        currentIndex < 0 ||
+        currentIndex >= questions.length) {
       return null;
     }
+
     return questions[currentIndex];
   }
 
@@ -41,25 +46,36 @@ class GameEngine {
     required void Function(int seconds) onTick,
   }) {
     _timer?.cancel();
+
+    if (isFinished || currentQuestion == null) return;
+
     remainingSeconds = secondsPerQuestion;
     hasAnswered = false;
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (isFinished || hasAnswered) {
-        timer.cancel();
-        return;
-      }
+    onTick(remainingSeconds);
 
-      if (remainingSeconds > 0) {
-        remainingSeconds--;
-        onTick(remainingSeconds);
-      } else {
-        timer.cancel();
-        hasAnswered = true;
-        wrongAnswers++;
-        onTimeUp();
-      }
-    });
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (timer) {
+        if (isFinished || hasAnswered) {
+          timer.cancel();
+          return;
+        }
+
+        if (remainingSeconds > 1) {
+          remainingSeconds--;
+          onTick(remainingSeconds);
+        } else {
+          remainingSeconds = 0;
+          hasAnswered = true;
+          wrongAnswers++;
+
+          timer.cancel();
+          onTick(0);
+          onTimeUp();
+        }
+      },
+    );
   }
 
   bool answer(int selectedIndex) {
@@ -68,13 +84,21 @@ class GameEngine {
     final question = currentQuestion;
     if (question == null) return false;
 
+    if (selectedIndex < 0 ||
+        selectedIndex >= question.answers.length) {
+      return false;
+    }
+
     hasAnswered = true;
     _timer?.cancel();
 
-    final isCorrect = selectedIndex == question.correctAnswer;
+    final isCorrect =
+        selectedIndex == question.correctAnswer;
 
     if (isCorrect) {
-      score += _pointsForDifficulty(question.difficulty);
+      score += _pointsForDifficulty(
+        question.difficulty,
+      );
       correctAnswers++;
     } else {
       wrongAnswers++;
@@ -97,7 +121,7 @@ class GameEngine {
   }
 
   bool nextQuestion() {
-    if (isFinished) return false;
+    if (isFinished || !hasAnswered) return false;
 
     _timer?.cancel();
 
@@ -117,10 +141,12 @@ class GameEngine {
   void finish() {
     _timer?.cancel();
     isFinished = true;
+    hasAnswered = true;
   }
 
   void reset() {
     _timer?.cancel();
+
     currentIndex = 0;
     score = 0;
     round = 1;
