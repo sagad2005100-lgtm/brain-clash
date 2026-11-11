@@ -27,22 +27,21 @@ class BrainClashApp extends StatelessWidget {
       title: 'Brain Clash',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        useMaterial3: true,
         brightness: Brightness.dark,
+        useMaterial3: true,
         scaffoldBackgroundColor: bg,
         colorScheme: const ColorScheme.dark(
           primary: gold,
           secondary: cyan,
           surface: surface,
         ),
-        fontFamily: 'Roboto',
       ),
       home: const SplashPage(),
     );
   }
 }
 
-// ================= SPLASH SCREEN =================
+// ================= SPLASH =================
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -53,8 +52,8 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
-  late AnimationController controller;
-  late Animation<double> animation;
+  late final AnimationController controller;
+  late final Animation<double> scale;
 
   @override
   void initState() {
@@ -62,30 +61,22 @@ class _SplashPageState extends State<SplashPage>
 
     controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 1300),
     );
 
-    animation = CurvedAnimation(
+    scale = CurvedAnimation(
       parent: controller,
       curve: Curves.easeOutBack,
     );
 
     controller.forward();
 
-    Timer(const Duration(milliseconds: 3000), () {
+    Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
 
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 700),
-          pageBuilder: (_, __, ___) => const HomePage(),
-          transitionsBuilder: (_, animation, __, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-        ),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
       );
     });
   }
@@ -106,116 +97,110 @@ class _SplashPageState extends State<SplashPage>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF171D42),
-              Color(0xFF080B16),
-              Color(0xFF160D30),
+              Color(0xFF20265A),
+              bg,
+              Color(0xFF1C1038),
             ],
           ),
         ),
         child: AnimatedBuilder(
-          animation: animation,
-          builder: (_, __) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Transform.scale(
-                  scale: animation.value,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(35),
-                      gradient: const LinearGradient(
-                        colors: [purple, cyan],
+          animation: scale,
+          builder: (_, __) => Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Transform.scale(
+                scale: scale.value,
+                child: Container(
+                  width: 125,
+                  height: 125,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [purple, cyan],
+                    ),
+                    borderRadius: BorderRadius.circular(35),
+                    boxShadow: [
+                      BoxShadow(
+                        color: purple.withOpacity(.4),
+                        blurRadius: 40,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: purple.withOpacity(.4),
-                          blurRadius: 45,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.psychology_alt_rounded,
-                      size: 75,
-                      color: Colors.white,
-                    ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.psychology_alt_rounded,
+                    size: 75,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 32),
-                const Text(
-                  'BRAIN CLASH',
-                  style: TextStyle(
-                    fontSize: 35,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 4,
-                  ),
+              ),
+              const SizedBox(height: 30),
+              const Text(
+                'BRAIN CLASH',
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 4,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'صراع العقول',
-                  style: TextStyle(
-                    fontSize: 22,
-                    color: cyan,
-                    fontWeight: FontWeight.bold,
-                  ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'صراع العقول',
+                style: TextStyle(
+                  color: cyan,
+                  fontSize: 23,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 45),
-                const SizedBox(
-                  width: 35,
-                  height: 35,
-                  child: CircularProgressIndicator(
-                    color: gold,
-                    strokeWidth: 3,
-                  ),
+              ),
+              const SizedBox(height: 40),
+              const CircularProgressIndicator(color: gold),
+              const SizedBox(height: 60),
+              const Text(
+                'تطوير سجاد السعيدي',
+                style: TextStyle(
+                  color: gold,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 65),
-                const Text(
-                  'تطوير سجاد السعيدي',
-                  style: TextStyle(
-                    color: gold,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'TRAIN YOUR MIND',
+                style: TextStyle(
+                  color: Colors.white38,
+                  letterSpacing: 3,
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'TRAIN YOUR MIND',
-                  style: TextStyle(
-                    color: Colors.white38,
-                    letterSpacing: 3,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ================= WORLDS =================
+// ================= WORLD MODEL =================
 
 class World {
   final String name;
-  final String subtitle;
+  final String description;
   final String emoji;
   final Color color;
 
-  const World(this.name, this.subtitle, this.emoji, this.color);
+  const World(
+    this.name,
+    this.description,
+    this.emoji,
+    this.color,
+  );
 }
 
 const worlds = <World>[
   World('عالم الذاكرة', 'اختبر قوة ذاكرتك', '🧠', purple),
   World('عالم الرياضيات', 'تحديات الأرقام', '🔢', cyan),
   World('عالم الكلمات', 'ألغاز وحروف', '🔤', Colors.orange),
-  World('عالم المنطق', 'حل المستحيل', '🧩', Colors.greenAccent),
-  World('عالم التركيز', 'لاحظ ما لا يلاحظه الآخرون', '👁', Colors.pinkAccent),
+  World('عالم المنطق', 'حل الأنماط المعقدة', '🧩', Colors.greenAccent),
+  World('عالم التركيز', 'لاحظ التفاصيل', '👁', Colors.pinkAccent),
   World('عالم الأشكال', 'ذكاء بصري', '🔷', Colors.blueAccent),
-  World('عالم الاستراتيجية', 'خطط قبل أن تتحرك', '♟', Colors.amber),
+  World('عالم الاستراتيجية', 'خطط قبل الحركة', '♟', gold),
   World('عالم المعلومات', 'اختبر معلوماتك', '🌍', Colors.tealAccent),
 ];
 
@@ -245,13 +230,15 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
 
     int done = 0;
-    int earned = 0;
+    int totalStars = 0;
 
     for (int w = 1; w <= 8; w++) {
       for (int s = 1; s <= 100; s++) {
-        final value = prefs.getInt('world_${w}_stage_$s') ?? 0;
-        if (value > 0) done++;
-        earned += value;
+        if (prefs.getBool('reward_w${w}_s$s') ?? false {
+          done++;
+        }
+
+        totalStars += prefs.getInt('stars_w${w}_s$s') ?? 0;
       }
     }
 
@@ -266,7 +253,7 @@ class _HomePageState extends State<HomePage> {
       xp = x;
       level = l;
       completed = done;
-      stars = earned;
+      stars = totalStars;
     });
   }
 
@@ -278,14 +265,52 @@ class _HomePageState extends State<HomePage> {
     refreshData();
   }
 
-  Future<void> openWorld(int index) async {
+  Future<void> openWorld(int world) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => StagePage(worldIndex: index + 1),
+        builder: (_) => StagePage(worldIndex: world),
       ),
     );
     refreshData();
+  }
+
+  Widget stat(
+    IconData icon,
+    String value,
+    String title,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 26),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 23,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -296,9 +321,8 @@ class _HomePageState extends State<HomePage> {
           onRefresh: refreshData,
           color: gold,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+            padding: const EdgeInsets.all(18),
             children: [
-              // Header
               Row(
                 children: [
                   Container(
@@ -311,7 +335,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                     child: const Icon(
                       Icons.psychology_alt_rounded,
-                      color: Colors.white,
                       size: 30,
                     ),
                   ),
@@ -325,7 +348,6 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
                           ),
                         ),
                         Text(
@@ -348,42 +370,26 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 25),
 
-              // Player card
+              // PLAYER CARD
               Container(
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
                   gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
                     colors: [
                       Color(0xFF303B77),
                       Color(0xFF171D38),
                       Color(0xFF21163F),
                     ],
                   ),
+                  borderRadius: BorderRadius.circular(28),
                   border: Border.all(color: purple.withOpacity(.4)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: purple.withOpacity(.12),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'مرحباً أيها العبقري',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        ),
-                        const Icon(Icons.stars_rounded, color: gold),
-                      ],
+                    const Text(
+                      'مرحباً أيها العبقري 🧠',
+                      style: TextStyle(color: Colors.white70),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -396,7 +402,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        const Icon(Icons.bolt_rounded, color: cyan),
+                        const Icon(Icons.bolt, color: cyan),
                         const SizedBox(width: 5),
                         Text('$xp XP'),
                         const Spacer(),
@@ -423,7 +429,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'واصل التحدي للوصول إلى المستوى التالي',
+                      'واصل التحدي للوصول للمستوى التالي',
                       style: TextStyle(
                         color: Colors.white54,
                         fontSize: 11,
@@ -435,11 +441,10 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 15),
 
-              // Statistics
               Row(
                 children: [
                   Expanded(
-                    child: _stat(
+                    child: stat(
                       Icons.flag_rounded,
                       '$completed',
                       'مرحلة مكتملة',
@@ -448,7 +453,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _stat(
+                    child: stat(
                       Icons.star_rounded,
                       '$stars',
                       'نجوم مكتسبة',
@@ -460,15 +465,12 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 24),
 
-              // Play button
+              // PLAY BUTTON
               InkWell(
-                onTap: () => openWorld(0),
+                onTap: () => openWorld(1),
                 borderRadius: BorderRadius.circular(22),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 19,
-                    horizontal: 20,
-                  ),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [purple, Color(0xFF6551D9)],
@@ -476,15 +478,14 @@ class _HomePageState extends State<HomePage> {
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
-                        color: purple.withOpacity(.3),
+                        color: purple.withOpacity(.25),
                         blurRadius: 20,
-                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.play_circle_fill, size: 32),
+                      Icon(Icons.play_circle_fill, size: 35),
                       SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -499,15 +500,12 @@ class _HomePageState extends State<HomePage> {
                             ),
                             Text(
                               'اختبر قدرات عقلك الآن',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
+                              style: TextStyle(color: Colors.white70),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.arrow_forward_ios, size: 17),
+                      Icon(Icons.arrow_forward_ios, size: 16),
                     ],
                   ),
                 ),
@@ -515,25 +513,12 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 28),
 
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'عوالم العقل',
-                      style: TextStyle(
-                        fontSize: 23,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '08 عوالم',
-                    style: TextStyle(
-                      color: cyan.withOpacity(.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+              const Text(
+                'عوالم العقل',
+                style: TextStyle(
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
 
               const SizedBox(height: 15),
@@ -553,14 +538,12 @@ class _HomePageState extends State<HomePage> {
                   final world = worlds[i];
 
                   return InkWell(
-                    onTap: () => openWorld(i),
+                    onTap: () => openWorld(i + 1),
                     borderRadius: BorderRadius.circular(23),
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
                           colors: [
                             world.color.withOpacity(.15),
                             surface,
@@ -595,7 +578,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 5),
                           Text(
-                            world.subtitle,
+                            world.description,
                             maxLines: 2,
                             style: const TextStyle(
                               color: Colors.white54,
@@ -619,4 +602,69 @@ class _HomePageState extends State<HomePage> {
                                 Icons.arrow_forward_ios,
                                 color: world.color,
                                 size: 12,
-                    
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 25),
+
+              const Center(
+                child: Text(
+                  'تطوير سجاد السعيدي',
+                  style: TextStyle(
+                    color: gold,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================= STAGES =================
+
+class StagePage extends StatefulWidget {
+  final int worldIndex;
+
+  const StagePage({
+    super.key,
+    required this.worldIndex,
+  });
+
+  @override
+  State<StagePage> createState() => _StagePageState();
+}
+
+class _StagePageState extends State<StagePage> {
+  final Map<int, int> stageStars = {};
+  int unlocked = 1;
+  bool loading = true;
+
+  World get world => worlds[widget.worldIndex - 1];
+
+  @override
+  void initState() {
+    super.initState();
+    loadStages();
+  }
+
+  Future<void> loadStages() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    int highest = 1;
+
+    for (int s = 1; s <= 100; s++) {
+      final completed =
+          prefs.getBool('reward_w${widget.worldIndex}_s$s') ?? false;
+
+      stageS
