@@ -1,9 +1,7 @@
 
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'reward_manager.dart';
 
 const gameBg = Color(0xFF080B16);
@@ -40,10 +38,10 @@ class _MiniGamePageState extends State<MiniGamePage> {
   bool hintUsed = false;
   bool saving = false;
 
-  late List<String> options;
-  late String question;
-  late String correctAnswer;
-  late String explanation;
+  List<String> options = [];
+  String question = '';
+  String correctAnswer = '';
+  String explanation = '';
 
   Map<String, int>? rewardResult;
 
@@ -60,7 +58,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
       gameGold,
       Colors.tealAccent,
     ];
-
     return colors[(widget.world - 1).clamp(0, 7)];
   }
 
@@ -75,7 +72,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
       'عالم الاستراتيجية',
       'عالم المعلومات',
     ];
-
     return names[(widget.world - 1).clamp(0, 7)];
   }
 
@@ -89,7 +85,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
   Future<void> loadHints() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-
     setState(() {
       hintsCount = prefs.getInt('inventory_hints') ?? 0;
     });
@@ -107,8 +102,8 @@ class _MiniGamePageState extends State<MiniGamePage> {
     }
 
     while (result.length < 4) {
-      final alternative = '${rand(10, 999)}';
-      if (alternative != answer) result.add(alternative);
+      final value = '${rand(10, 999)}';
+      if (value != answer) result.add(value);
     }
 
     final list = result.take(4).toList();
@@ -119,25 +114,23 @@ class _MiniGamePageState extends State<MiniGamePage> {
   Map<String, dynamic> make(
     String q,
     String answer,
-    String explanation,
+    String exp,
     List<String> wrong,
   ) {
     return {
       'q': q,
       'a': answer,
-      'e': explanation,
+      'e': exp,
       'o': choices(answer, wrong),
     };
   }
 
   void loadQuestion() {
     final item = generateQuestion(difficulty);
-
     question = item['q'] as String;
     correctAnswer = item['a'] as String;
     explanation = item['e'] as String;
     options = List<String>.from(item['o'] as List);
-
     selected = -1;
     answered = false;
     hintUsed = false;
@@ -160,15 +153,15 @@ class _MiniGamePageState extends State<MiniGamePage> {
           final index = rand(0, length - 1);
           alternative[index] =
               (alternative[index] + rand(1, 9)) % 10;
-
           final value = alternative.join();
+
           if (value != answer && !wrong.contains(value)) {
             wrong.add(value);
           }
         }
 
         return make(
-          'اختبر ذاكرتك:\n\n$answer\n\nما التسلسل الصحيح الذي شاهدته؟',
+          'احفظ التسلسل:\n\n$answer\n\nما الرقم الصحيح؟',
           answer,
           'التسلسل الأصلي هو $answer',
           wrong,
@@ -186,24 +179,24 @@ class _MiniGamePageState extends State<MiniGamePage> {
 
         if (type == 0) {
           answer = a * b;
-          q = 'احسب بدقة:\n$a × $b';
+          q = '$a × $b = ؟';
           exp = '$a × $b = $answer';
         } else if (type == 1) {
           answer = a * b + c;
-          q = 'احسب:\n($a × $b) + $c';
-          exp = '($a × $b) + $c = $answer';
+          q = '($a × $b) + $c = ؟';
+          exp = 'النتيجة $answer';
         } else if (type == 2) {
           answer = a * b - c;
-          q = 'احسب:\n($a × $b) - $c';
-          exp = '($a × $b) - $c = $answer';
+          q = '($a × $b) - $c = ؟';
+          exp = 'النتيجة $answer';
         } else {
           answer = a * a - b;
-          q = 'احسب:\n$a² - $b';
+          q = '$a² - $b = ؟';
           exp = '$a × $a - $b = $answer';
         }
 
         return make(
-          q,
+          'تحدي الحساب:\n\n$q',
           '$answer',
           exp,
           [
@@ -215,7 +208,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
         );
 
       case 3:
-        final words = [
+        const words = [
           'استراتيجية',
           'مستقبل',
           'عبقرية',
@@ -239,7 +232,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
           ..shuffle(random);
 
         return make(
-          'كوّن الكلمة الصحيحة من الحروف:\n\n${chars.join()}',
+          'كوّن الكلمة الصحيحة:\n\n${chars.join('  ')}',
           word,
           'الكلمة الصحيحة: $word',
           wrong.take(3).toList(),
@@ -273,7 +266,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
         }
 
         return make(
-          'اكتشف النمط وأكمله:\n\n${sequence.join('  •  ')}  •  ؟',
+          'اكتشف النمط:\n\n${sequence.join(' • ')} • ؟',
           '$answer',
           exp,
           [
@@ -299,7 +292,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
             base * 2 + 1,
           ];
           odd = base * 2 + 1;
-          reason = 'الأعداد الأخرى زوجية، وهذا العدد فردي';
+          reason = 'الأعداد الأخرى زوجية';
         } else if (type == 1) {
           nums = [
             base * 3,
@@ -323,14 +316,14 @@ class _MiniGamePageState extends State<MiniGamePage> {
         nums.shuffle(random);
 
         return make(
-          'اكتشف العدد الذي لا ينتمي إلى المجموعة:\n\n${nums.join('     ')}',
+          'اكتشف العدد المختلف:\n\n${nums.join('     ')}',
           '$odd',
           reason,
           nums.where((n) => n != odd).map((n) => '$n').toList(),
         );
 
       case 6:
-        final patterns = [
+        const patterns = [
           ['🔴', '🔵', '🟢', '🟡'],
           ['▲', '■', '●', '◆'],
           ['⭐', '🌙', '☀️', '⚡'],
@@ -343,7 +336,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
         final answer = p[(5 * step) % p.length];
 
         return make(
-          'اكتشف النمط البصري:\n\n${sequence.join('   ')}   ؟',
+          'أكمل النمط البصري:\n\n${sequence.join('   ')}   ؟',
           answer,
           'يتكرر ترتيب الرموز وفق النمط نفسه',
           p.where((x) => x != answer).toList(),
@@ -371,19 +364,19 @@ class _MiniGamePageState extends State<MiniGamePage> {
         );
 
       default:
-        final facts = [
-          ['ما العنصر الكيميائي الذي رمزه Fe؟', 'الحديد', 'Fe هو رمز الحديد'],
+        const facts = [
+          ['ما العنصر الكيميائي الذي رمزه Fe؟', 'الحديد', 'Fe رمز الحديد'],
           ['ما أكبر محيط في العالم؟', 'المحيط الهادئ', 'المحيط الهادئ هو الأكبر'],
-          ['كم عدد عظام جسم الإنسان البالغ تقريباً؟', '206', 'العدد المعتاد 206 عظمة'],
+          ['كم عدد عظام الإنسان البالغ تقريباً؟', '206', 'العدد المعتاد 206'],
           ['ما الغاز الأكثر وجوداً في الغلاف الجوي؟', 'النيتروجين', 'النيتروجين يشكل نحو 78%'],
           ['ما الكوكب الأقرب إلى الشمس؟', 'عطارد', 'عطارد أقرب الكواكب إلى الشمس'],
-          ['ما وحدة قياس شدة التيار الكهربائي؟', 'الأمبير', 'شدة التيار تقاس بالأمبير'],
+          ['ما وحدة قياس التيار الكهربائي؟', 'الأمبير', 'التيار يقاس بالأمبير'],
           ['ما عاصمة اليابان؟', 'طوكيو', 'طوكيو عاصمة اليابان'],
           ['ما العضو المسؤول عن ضخ الدم؟', 'القلب', 'القلب يضخ الدم'],
           ['كم عدد أضلاع الشكل السداسي؟', '6', 'السداسي له ستة أضلاع'],
           ['ما أكبر قارة مساحة؟', 'آسيا', 'آسيا أكبر قارات العالم'],
           ['ما اللغة الرسمية في البرازيل؟', 'البرتغالية', 'البرازيل تتحدث البرتغالية'],
-          ['ما الكوكب الذي يمتلك حلقات واضحة؟', 'زحل', 'زحل مشهور بحلقاته'],
+          ['ما الكوكب المشهور بحلقاته؟', 'زحل', 'زحل مشهور بحلقاته'],
         ];
 
         final f = facts[rand(0, facts.length - 1)];
@@ -403,14 +396,13 @@ class _MiniGamePageState extends State<MiniGamePage> {
   // ================= HINT =================
 
   Future<void> useHint() async {
-    if (answered || hintUsed) return;
+    if (answered || hintUsed || finished) return;
 
     final prefs = await SharedPreferences.getInstance();
     final current = prefs.getInt('inventory_hints') ?? 0;
 
     if (current <= 0) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('لا توجد تلميحات! اشترِ من المتجر 💡'),
@@ -471,9 +463,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
   Future<void> finishGame() async {
     if (saving || finished) return;
 
-    setState(() {
-      saving = true;
-    });
+    setState(() => saving = true);
 
     try {
       final result = await RewardManager.completeStage(
@@ -489,12 +479,10 @@ class _MiniGamePageState extends State<MiniGamePage> {
         finished = true;
         saving = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
 
-      setState(() {
-        saving = false;
-      });
+      setState(() => saving = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -562,6 +550,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
           ),
         ),
         const SizedBox(height: 22),
+
         Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
@@ -598,7 +587,9 @@ class _MiniGamePageState extends State<MiniGamePage> {
             ],
           ),
         ),
+
         const SizedBox(height: 14),
+
         OutlinedButton.icon(
           onPressed: answered || hintUsed ? null : useHint,
           icon: const Icon(Icons.lightbulb, color: gameGold),
@@ -611,7 +602,9 @@ class _MiniGamePageState extends State<MiniGamePage> {
             padding: const EdgeInsets.all(13),
           ),
         ),
+
         const SizedBox(height: 14),
+
         ...List.generate(options.length, (i) {
           final right = options[i] == correctAnswer;
 
@@ -637,7 +630,10 @@ class _MiniGamePageState extends State<MiniGamePage> {
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: borderColor, width: 1.4),
+                  border: Border.all(
+                    color: borderColor,
+                    width: 1.4,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -667,6 +663,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
             ),
           );
         }),
+
         if (answered) ...[
           const SizedBox(height: 8),
           Container(
@@ -731,4 +728,10 @@ class _MiniGamePageState extends State<MiniGamePage> {
           ),
         ],
       ],
-   
+    );
+  }
+
+  // ================= RESULT SCREEN =================
+
+  Widget resultScreen() {
+    final s
