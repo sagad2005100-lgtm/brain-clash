@@ -47,13 +47,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
 
   Map<String, int>? rewardResult;
 
-  @override
-  void initState() {
-    super.initState();
-    loadQuestion();
-    loadHints();
-  }
-
   int get difficulty => min(100, widget.stage + questionIndex);
 
   Color get worldColor {
@@ -68,8 +61,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
       Colors.tealAccent,
     ];
 
-    final index = (widget.world - 1).clamp(0, 7).toInt();
-    return colors[index];
+    return colors[(widget.world - 1).clamp(0, 7)];
   }
 
   String get worldName {
@@ -84,13 +76,18 @@ class _MiniGamePageState extends State<MiniGamePage> {
       'عالم المعلومات',
     ];
 
-    final index = (widget.world - 1).clamp(0, 7).toInt();
-    return names[index];
+    return names[(widget.world - 1).clamp(0, 7)];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadQuestion();
+    loadHints();
   }
 
   Future<void> loadHints() async {
     final prefs = await SharedPreferences.getInstance();
-
     if (!mounted) return;
 
     setState(() {
@@ -99,30 +96,23 @@ class _MiniGamePageState extends State<MiniGamePage> {
   }
 
   int rand(int minValue, int maxValue) {
-    return minValue +
-        random.nextInt(maxValue - minValue + 1);
+    return minValue + random.nextInt(maxValue - minValue + 1);
   }
 
   List<String> choices(String answer, List<String> wrong) {
     final result = <String>{answer};
 
     for (final value in wrong) {
-      if (value != answer) {
-        result.add(value);
-      }
+      if (value != answer) result.add(value);
     }
 
     while (result.length < 4) {
       final alternative = '${rand(10, 999)}';
-
-      if (alternative != answer) {
-        result.add(alternative);
-      }
+      if (alternative != answer) result.add(alternative);
     }
 
     final list = result.take(4).toList();
     list.shuffle(random);
-
     return list;
   }
 
@@ -159,42 +149,31 @@ class _MiniGamePageState extends State<MiniGamePage> {
     final d = max(1, level);
 
     switch (widget.world) {
-      // WORLD 1: MEMORY
       case 1:
         final length = min(10, 3 + d ~/ 8);
-
-        final sequence = List.generate(
-          length,
-          (_) => rand(0, 9),
-        );
-
+        final sequence = List.generate(length, (_) => rand(0, 9));
         final answer = sequence.join();
         final wrong = <String>[];
 
         while (wrong.length < 3) {
           final alternative = List<int>.from(sequence);
           final index = rand(0, length - 1);
-
           alternative[index] =
               (alternative[index] + rand(1, 9)) % 10;
 
           final value = alternative.join();
-
           if (value != answer && !wrong.contains(value)) {
             wrong.add(value);
           }
         }
 
         return make(
-          'اختبر ذاكرتك:\n\n'
-          '$answer\n\n'
-          'ما التسلسل الصحيح الذي شاهدته؟',
+          'اختبر ذاكرتك:\n\n$answer\n\nما التسلسل الصحيح الذي شاهدته؟',
           answer,
           'التسلسل الأصلي هو $answer',
           wrong,
         );
 
-      // WORLD 2: MATHEMATICS
       case 2:
         final a = rand(10, 20 + d * 3);
         final b = rand(5, 15 + d);
@@ -235,7 +214,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
           ],
         );
 
-      // WORLD 3: WORDS
       case 3:
         final words = [
           'استراتيجية',
@@ -256,24 +234,17 @@ class _MiniGamePageState extends State<MiniGamePage> {
         ];
 
         final word = words[rand(0, words.length - 1)];
-        final chars = word.split('');
-
-        chars.shuffle(random);
-
-        final scrambled = chars.join();
-
+        final chars = word.split('')..shuffle(random);
         final wrong = words.where((w) => w != word).toList()
           ..shuffle(random);
 
         return make(
-          'كوّن الكلمة الصحيحة من الحروف:\n\n'
-          '$scrambled',
+          'كوّن الكلمة الصحيحة من الحروف:\n\n${chars.join()}',
           word,
           'الكلمة الصحيحة: $word',
           wrong.take(3).toList(),
         );
 
-      // WORLD 4: LOGIC
       case 4:
         final start = rand(2, 20);
         final step = rand(2, 5 + d ~/ 4);
@@ -285,11 +256,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
         late String exp;
 
         if (type == 0) {
-          sequence = List.generate(
-            4,
-            (i) => start + step * i,
-          );
-
+          sequence = List.generate(4, (i) => start + step * i);
           answer = start + step * 4;
           exp = 'نضيف $step في كل مرة';
         } else if (type == 1) {
@@ -297,22 +264,16 @@ class _MiniGamePageState extends State<MiniGamePage> {
             4,
             (i) => start * pow(multiplier, i).toInt(),
           );
-
           answer = start * pow(multiplier, 4).toInt();
           exp = 'نضرب كل رقم بـ $multiplier';
         } else {
-          sequence = List.generate(
-            4,
-            (i) => start + i * i * step,
-          );
-
+          sequence = List.generate(4, (i) => start + i * i * step);
           answer = start + 16 * step;
           exp = 'الزيادة تعتمد على مربعات الأعداد';
         }
 
         return make(
-          'اكتشف النمط وأكمله:\n\n'
-          '${sequence.join('  •  ')}  •  ؟',
+          'اكتشف النمط وأكمله:\n\n${sequence.join('  •  ')}  •  ؟',
           '$answer',
           exp,
           [
@@ -322,7 +283,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
           ],
         );
 
-      // WORLD 5: FOCUS
       case 5:
         final base = rand(10, 100 + d * 5);
         final type = rand(0, 2);
@@ -338,7 +298,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
             base * 6,
             base * 2 + 1,
           ];
-
           odd = base * 2 + 1;
           reason = 'الأعداد الأخرى زوجية، وهذا العدد فردي';
         } else if (type == 1) {
@@ -348,7 +307,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
             base * 7,
             base * 3 + 2,
           ];
-
           odd = base * 3 + 2;
           reason = 'الأعداد الأخرى تقبل القسمة على 3';
         } else {
@@ -358,7 +316,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
             base * base + 4,
             base * base + 9,
           ];
-
           odd = base * base + 1;
           reason = 'العدد المختلف ليس مربعاً كاملاً';
         }
@@ -366,17 +323,12 @@ class _MiniGamePageState extends State<MiniGamePage> {
         nums.shuffle(random);
 
         return make(
-          'اكتشف العدد الذي لا ينتمي إلى المجموعة:\n\n'
-          '${nums.join('     ')}',
+          'اكتشف العدد الذي لا ينتمي إلى المجموعة:\n\n${nums.join('     ')}',
           '$odd',
           reason,
-          nums
-              .where((n) => n != odd)
-              .map((n) => '$n')
-              .toList(),
+          nums.where((n) => n != odd).map((n) => '$n').toList(),
         );
 
-      // WORLD 6: VISUAL PATTERNS
       case 6:
         final patterns = [
           ['🔴', '🔵', '🟢', '🟡'],
@@ -387,27 +339,19 @@ class _MiniGamePageState extends State<MiniGamePage> {
 
         final p = patterns[rand(0, patterns.length - 1)];
         final step = rand(1, 3);
-
-        final sequence = List.generate(
-          5,
-          (i) => p[(i * step) % p.length],
-        );
-
+        final sequence = List.generate(5, (i) => p[(i * step) % p.length]);
         final answer = p[(5 * step) % p.length];
 
         return make(
-          'اكتشف النمط البصري:\n\n'
-          '${sequence.join('   ')}   ؟',
+          'اكتشف النمط البصري:\n\n${sequence.join('   ')}   ؟',
           answer,
           'يتكرر ترتيب الرموز وفق النمط نفسه',
           p.where((x) => x != answer).toList(),
         );
 
-      // WORLD 7: STRATEGY
       case 7:
         final step = rand(3, 10 + d);
         final moves = rand(3, 7);
-
         final forward = moves * step;
         final backward = (moves - 1) * (step - 2);
         final answer = forward - backward;
@@ -426,77 +370,24 @@ class _MiniGamePageState extends State<MiniGamePage> {
           ],
         );
 
-      // WORLD 8: GENERAL KNOWLEDGE
       default:
         final facts = [
-          [
-            'ما العنصر الكيميائي الذي رمزه Fe؟',
-            'الحديد',
-            'Fe هو رمز الحديد',
-          ],
-          [
-            'ما أكبر محيط في العالم؟',
-            'المحيط الهادئ',
-            'المحيط الهادئ هو الأكبر',
-          ],
-          [
-            'كم عدد عظام جسم الإنسان البالغ تقريباً؟',
-            '206',
-            'العدد المعتاد 206 عظمة',
-          ],
-          [
-            'ما الغاز الأكثر وجوداً في الغلاف الجوي؟',
-            'النيتروجين',
-            'النيتروجين يشكل نحو 78%',
-          ],
-          [
-            'ما الكوكب الأقرب إلى الشمس؟',
-            'عطارد',
-            'عطارد أقرب الكواكب إلى الشمس',
-          ],
-          [
-            'ما وحدة قياس شدة التيار الكهربائي؟',
-            'الأمبير',
-            'شدة التيار تقاس بالأمبير',
-          ],
-          [
-            'ما عاصمة اليابان؟',
-            'طوكيو',
-            'طوكيو عاصمة اليابان',
-          ],
-          [
-            'ما العضو المسؤول عن ضخ الدم؟',
-            'القلب',
-            'القلب يضخ الدم',
-          ],
-          [
-            'كم عدد أضلاع الشكل السداسي؟',
-            '6',
-            'السداسي له ستة أضلاع',
-          ],
-          [
-            'ما أكبر قارة مساحة؟',
-            'آسيا',
-            'آسيا أكبر قارات العالم',
-          ],
-          [
-            'ما اللغة الرسمية في البرازيل؟',
-            'البرتغالية',
-            'البرازيل تتحدث البرتغالية',
-          ],
-          [
-            'ما الكوكب الذي يمتلك حلقات واضحة؟',
-            'زحل',
-            'زحل مشهور بحلقاته',
-          ],
+          ['ما العنصر الكيميائي الذي رمزه Fe؟', 'الحديد', 'Fe هو رمز الحديد'],
+          ['ما أكبر محيط في العالم؟', 'المحيط الهادئ', 'المحيط الهادئ هو الأكبر'],
+          ['كم عدد عظام جسم الإنسان البالغ تقريباً؟', '206', 'العدد المعتاد 206 عظمة'],
+          ['ما الغاز الأكثر وجوداً في الغلاف الجوي؟', 'النيتروجين', 'النيتروجين يشكل نحو 78%'],
+          ['ما الكوكب الأقرب إلى الشمس؟', 'عطارد', 'عطارد أقرب الكواكب إلى الشمس'],
+          ['ما وحدة قياس شدة التيار الكهربائي؟', 'الأمبير', 'شدة التيار تقاس بالأمبير'],
+          ['ما عاصمة اليابان؟', 'طوكيو', 'طوكيو عاصمة اليابان'],
+          ['ما العضو المسؤول عن ضخ الدم؟', 'القلب', 'القلب يضخ الدم'],
+          ['كم عدد أضلاع الشكل السداسي؟', '6', 'السداسي له ستة أضلاع'],
+          ['ما أكبر قارة مساحة؟', 'آسيا', 'آسيا أكبر قارات العالم'],
+          ['ما اللغة الرسمية في البرازيل؟', 'البرتغالية', 'البرازيل تتحدث البرتغالية'],
+          ['ما الكوكب الذي يمتلك حلقات واضحة؟', 'زحل', 'زحل مشهور بحلقاته'],
         ];
 
         final f = facts[rand(0, facts.length - 1)];
-
-        final wrong = facts
-            .map((x) => x[1])
-            .toSet()
-            .toList()
+        final wrong = facts.map((x) => x[1]).toSet().toList()
           ..remove(f[1])
           ..shuffle(random);
 
@@ -525,22 +416,17 @@ class _MiniGamePageState extends State<MiniGamePage> {
           content: Text('لا توجد تلميحات! اشترِ من المتجر 💡'),
         ),
       );
-
       return;
     }
 
-    final wrong = options
-        .where((x) => x != correctAnswer)
-        .toList()
+    final wrong = options.where((x) => x != correctAnswer).toList()
       ..shuffle(random);
 
-    final reduced = [
-      correctAnswer,
-      wrong.first,
-    ]..shuffle(random);
+    if (wrong.isEmpty) return;
+
+    final reduced = [correctAnswer, wrong.first]..shuffle(random);
 
     await prefs.setInt('inventory_hints', current - 1);
-
     if (!mounted) return;
 
     setState(() {
@@ -553,7 +439,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
   // ================= ANSWERS =================
 
   void chooseAnswer(int index) {
-    if (answered || finished) return;
+    if (answered || finished || saving) return;
 
     setState(() {
       selected = index;
@@ -629,9 +515,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
         elevation: 0,
         title: Text(
           worldName,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -678,8 +562,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
           ),
         ),
         const SizedBox(height: 22),
-
-        // QUESTION CARD
         Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
@@ -716,33 +598,20 @@ class _MiniGamePageState extends State<MiniGamePage> {
             ],
           ),
         ),
-
         const SizedBox(height: 14),
-
-        // HINT BUTTON
         OutlinedButton.icon(
           onPressed: answered || hintUsed ? null : useHint,
-          icon: const Icon(
-            Icons.lightbulb,
-            color: gameGold,
-          ),
+          icon: const Icon(Icons.lightbulb, color: gameGold),
           label: Text(
-            hintUsed
-                ? 'تم استخدام التلميح'
-                : 'تلميح ($hintsCount)',
+            hintUsed ? 'تم استخدام التلميح' : 'تلميح ($hintsCount)',
           ),
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.white,
-            side: BorderSide(
-              color: gameGold.withOpacity(.5),
-            ),
+            side: BorderSide(color: gameGold.withOpacity(.5)),
             padding: const EdgeInsets.all(13),
           ),
         ),
-
         const SizedBox(height: 14),
-
-        // ANSWER OPTIONS
         ...List.generate(options.length, (i) {
           final right = options[i] == correctAnswer;
 
@@ -768,10 +637,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1.4,
-                  ),
+                  border: Border.all(color: borderColor, width: 1.4),
                 ),
                 child: Row(
                   children: [
@@ -801,8 +667,6 @@ class _MiniGamePageState extends State<MiniGamePage> {
             ),
           );
         }),
-
-        // ANSWER FEEDBACK
         if (answered) ...[
           const SizedBox(height: 8),
           Container(
@@ -822,4 +686,49 @@ class _MiniGamePageState extends State<MiniGamePage> {
                       : 'إجابة غير صحيحة',
                   style: TextStyle(
                     color: options[selected] == correctAnswer
-                     
+                        ? Colors.greenAccent
+                        : Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  explanation,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: saving ? null : nextQuestion,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: worldColor,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.all(15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      questionIndex == 9
+                          ? 'إنهاء المرحلة'
+                          : 'السؤال التالي',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+   
