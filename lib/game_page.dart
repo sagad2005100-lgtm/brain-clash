@@ -2,12 +2,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'reward_manager.dart';
 
 const gameBg = Color(0xFF080B16);
 const gameCard = Color(0xFF151B30);
 const gameGold = Color(0xFFFFD166);
 const gameCyan = Color(0xFF55D6FF);
-const gamePurple = Color(0xFF9B7BFF);
+const gamePurple = Color(0xFF9B7BFF;
 
 class MiniGamePage extends StatefulWidget {
   final int world;
@@ -35,11 +36,14 @@ class _MiniGamePageState extends State<MiniGamePage> {
   bool answered = false;
   bool finished = false;
   bool hintUsed = false;
+  bool saving = false;
 
   late List<String> options;
   late String question;
   late String correctAnswer;
   late String explanation;
+
+  Map<String, int>? rewardResult;
 
   @override
   void initState() {
@@ -61,13 +65,18 @@ class _MiniGamePageState extends State<MiniGamePage> {
       gameGold,
       Colors.tealAccent,
     ];
+
     return colors[(widget.world - 1).clamp(0, 7)];
   }
 
   Future<void> loadHints() async {
     final prefs = await SharedPreferences.getInstance();
+
     if (!mounted) return;
-    setState(() => hintsCount = prefs.getInt('inventory_hints') ?? 0);
+
+    setState(() {
+      hintsCount = prefs.getInt('inventory_hints') ?? 0;
+    });
   }
 
   int rand(int minValue, int maxValue) =>
@@ -86,6 +95,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
 
     final list = result.take(4).toList();
     list.shuffle(random);
+
     return list;
   }
 
@@ -133,7 +143,9 @@ class _MiniGamePageState extends State<MiniGamePage> {
         while (wrong.length < 3) {
           final alternative = List<int>.from(sequence);
           final index = rand(0, length - 1);
-          alternative[index] = (alternative[index] + rand(1, 9)) % 10;
+
+          alternative[index] =
+              (alternative[index] + rand(1, 9)) % 10;
 
           final value = alternative.join();
 
@@ -451,12 +463,50 @@ class _MiniGamePageState extends State<MiniGamePage> {
 
   void nextQuestion() {
     if (questionIndex >= 9) {
-      setState(() => finished = true);
+      finishGame();
     } else {
       setState(() {
         questionIndex++;
         loadQuestion();
       });
+    }
+  }
+
+  // ================= FINISH GAME =================
+
+  Future<void> finishGame() async {
+    if (saving || finished) return;
+
+    setState(() {
+      saving = true;
+    });
+
+    try {
+      final result = await RewardManager.completeStage(
+        widget.world,
+        widget.stage,
+        score,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        rewardResult = result;
+        finished = true;
+        saving = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        saving = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('حدث خطأ أثناء حفظ المكافآت'),
+        ),
+      );
     }
   }
 
@@ -492,6 +542,8 @@ class _MiniGamePageState extends State<MiniGamePage> {
       ),
     );
   }
+
+  // ================= GAME UI =================
 
   Widget gameScreen() {
     return Column(
@@ -556,6 +608,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
         const SizedBox(height: 12),
         ...List.generate(options.length, (i) {
           final right = options[i] == correctAnswer;
+
           Color color = gameCard;
           Color border = Colors.white12;
 
@@ -593,9 +646,15 @@ class _MiniGamePageState extends State<MiniGamePage> {
                       ),
                     ),
                     if (answered && right)
-                      const Icon(Icons.check_circle, color: Colors.greenAccent),
+                      const Icon(
+                        Icons.check_circle,
+                        color: Colors.greenAccent,
+                      ),
                     if (answered && selected == i && !right)
-                      const Icon(Icons.cancel, color: Colors.redAccent),
+                      const Icon(
+                        Icons.cancel,
+                        color: Colors.redAccent,
+                      ),
                   ],
                 ),
               ),
@@ -641,7 +700,9 @@ class _MiniGamePageState extends State<MiniGamePage> {
                       padding: const EdgeInsets.all(15),
                     ),
                     child: Text(
-                      questionIndex == 9 ? 'عرض النتيجة' : 'السؤال التالي',
+                      questionIndex == 9
+                          ? 'إنهاء المرحلة'
+                          : 'السؤال التالي',
                     ),
                   ),
                 ),
@@ -652,9 +713,19 @@ class _MiniGamePageState extends State<MiniGamePage> {
     );
   }
 
+  // ================= RESULT UI =================
+
   Widget resultScreen() {
-    final percent = score * 10;
-    final stars = score >= 9 ? 3 : score >= 7 ? 2 : score >= 5 ? 1 : 0;
+    final stars = score >= 9
+        ? 3
+        : score >= 7
+            ? 2
+            : score >= 5
+                ? 1
+                : 0;
+
+    final coins = rewardResult?['coins'] ?? 0;
+    final xp = rewardResult?['xp'] ?? 0;
 
     return Center(
       child: SingleChildScrollView(
@@ -677,47 +748,12 @@ class _MiniGamePageState extends State<MiniGamePage> {
             const SizedBox(height: 22),
             const Text(
               'انتهى التحدي!',
-              style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 27,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               '$score / 10',
-              style: const TextStyle(
-                color: gameGold,
-                fontSize: 48,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            Text(
-              '$percent%',
-              style: const TextStyle(color: Colors.white54),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                3,
-                (i) => Icon(
-                  Icons.star_rounded,
-                  size: 45,
-                  color: i < stars ? gameGold : Colors.white12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              score >= 9
-                  ? 'عبقري! أداء أسطوري 🧠'
-                  : score >= 7
-                      ? 'ممتاز! اقتربت من الكمال 🔥'
-                      : score >= 5
-                          ? 'جيد، لكن يمكنك الأفضل!'
-                          : 'تحدّ نفسك وحاول مجدداً!',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-          
+   
