@@ -1,23 +1,20 @@
-
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'game_page.dart';
 import 'reward_manager.dart';
 import 'shop_page.dart';
 
-void main() async {
+const Color bg = Color(0xFF080B16);
+const Color surface = Color(0xFF151B30);
+const Color gold = Color(0xFFFFD166);
+const Color cyan = Color(0xFF55D6FF);
+const Color purple = Color(0xFF9B7BFF);
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const BrainClashApp());
 }
-
-const bg = Color(0xFF080B16);
-const surface = Color(0xFF12182A);
-const gold = Color(0xFFFFD166);
-const cyan = Color(0xFF55D6FF);
-const purple = Color(0xFF9B7BFF);
 
 class BrainClashApp extends StatelessWidget {
   const BrainClashApp({super.key});
@@ -25,16 +22,20 @@ class BrainClashApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Brain Clash',
       debugShowCheckedModeBanner: false,
+      title: 'Brain Clash',
       theme: ThemeData(
-        useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: bg,
         colorScheme: const ColorScheme.dark(
           primary: gold,
           secondary: cyan,
           surface: surface,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: bg,
+          foregroundColor: Colors.white,
+          elevation: 0,
         ),
       ),
       home: const SplashPage(),
@@ -54,6 +55,7 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController controller;
+  late final Animation<double> animation;
 
   @override
   void initState() {
@@ -61,8 +63,15 @@ class _SplashPageState extends State<SplashPage>
 
     controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..forward();
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    animation = CurvedAnimation(
+      parent: controller,
+      curve: Curves.easeOutBack,
+    );
+
+    controller.forward();
 
     Timer(const Duration(milliseconds: 2200), () {
       if (!mounted) return;
@@ -86,77 +95,62 @@ class _SplashPageState extends State<SplashPage>
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF171D42),
-              bg,
-              Color(0xFF160D30),
-            ],
+            colors: [Color(0xFF101936), bg],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
-        child: AnimatedBuilder(
-          animation: controller,
-          builder: (_, __) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Transform.scale(
-                  scale: Curves.easeOutBack.transform(controller.value),
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(32),
-                      gradient: const LinearGradient(
-                        colors: [purple, cyan],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: purple.withOpacity(.4),
-                          blurRadius: 35,
-                        ),
-                      ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ScaleTransition(
+              scale: animation,
+              child: Container(
+                padding: const EdgeInsets.all(25),
+                decoration: BoxDecoration(
+                  color: surface,
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: cyan.withOpacity(.4)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: cyan.withOpacity(.12),
+                      blurRadius: 30,
                     ),
-                    child: const Icon(
-                      Icons.psychology_alt_rounded,
-                      size: 75,
-                      color: Colors.white,
-                    ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 30),
-                const Text(
-                  'BRAIN CLASH',
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 4,
-                  ),
+                child: const Icon(
+                  Icons.psychology_alt_rounded,
+                  size: 75,
+                  color: cyan,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'صراع العقول',
-                  style: TextStyle(
-                    fontSize: 22,
-                    color: cyan,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 45),
-                const CircularProgressIndicator(color: gold),
-                const SizedBox(height: 55),
-                const Text(
-                  'تطوير سجاد السعيدي',
-                  style: TextStyle(
-                    color: gold,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            );
-          },
+              ),
+            ),
+            const SizedBox(height: 25),
+            const Text(
+              'BRAIN CLASH',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 3,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'صراع العقول',
+              style: TextStyle(
+                color: gold,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 45),
+            const CircularProgressIndicator(color: cyan),
+            const SizedBox(height: 25),
+            const Text(
+              'تطوير سجاد السعيدي',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ],
         ),
       ),
     );
@@ -165,29 +159,79 @@ class _SplashPageState extends State<SplashPage>
 
 // ================= WORLDS =================
 
-class World {
+class GameWorld {
+  final int id;
   final String name;
   final String subtitle;
   final String emoji;
   final Color color;
 
-  const World(
-    this.name,
-    this.subtitle,
-    this.emoji,
-    this.color,
-  );
+  const GameWorld({
+    required this.id,
+    required this.name,
+    required this.subtitle,
+    required this.emoji,
+    required this.color,
+  });
 }
 
-const worlds = <World>[
-  World('عالم الذاكرة', 'اختبر قوة ذاكرتك', '🧠', purple),
-  World('عالم الرياضيات', 'تحديات الأرقام', '🔢', cyan),
-  World('عالم الكلمات', 'ألغاز وحروف', '🔤', Colors.orange),
-  World('عالم المنطق', 'حل المستحيل', '🧩', Colors.greenAccent),
-  World('عالم التركيز', 'لاحظ التفاصيل', '👁', Colors.pinkAccent),
-  World('عالم الأشكال', 'ذكاء بصري', '🔷', Colors.blueAccent),
-  World('عالم الاستراتيجية', 'خطط قبل الحركة', '♟', gold),
-  World('عالم المعلومات', 'اختبر معلوماتك', '🌍', Colors.tealAccent),
+const List<GameWorld> worlds = [
+  GameWorld(
+    id: 1,
+    name: 'عالم الذاكرة',
+    subtitle: 'اختبر قوة ذاكرتك',
+    emoji: '🧠',
+    color: purple,
+  ),
+  GameWorld(
+    id: 2,
+    name: 'عالم الرياضيات',
+    subtitle: 'حل العمليات الصعبة',
+    emoji: '➗',
+    color: cyan,
+  ),
+  GameWorld(
+    id: 3,
+    name: 'عالم الكلمات',
+    subtitle: 'تحديات لغوية ذكية',
+    emoji: '🔤',
+    color: Colors.orange,
+  ),
+  GameWorld(
+    id: 4,
+    name: 'عالم المنطق',
+    subtitle: 'اكتشف الحل الصحيح',
+    emoji: '🧩',
+    color: Colors.greenAccent,
+  ),
+  GameWorld(
+    id: 5,
+    name: 'عالم التركيز',
+    subtitle: 'ركز قبل أن تختار',
+    emoji: '🎯',
+    color: Colors.pinkAccent,
+  ),
+  GameWorld(
+    id: 6,
+    name: 'عالم الأشكال',
+    subtitle: 'أنماط وأشكال متغيرة',
+    emoji: '🔷',
+    color: Colors.blueAccent,
+  ),
+  GameWorld(
+    id: 7,
+    name: 'عالم الاستراتيجية',
+    subtitle: 'خطط وفكر بذكاء',
+    emoji: '♟️',
+    color: gold,
+  ),
+  GameWorld(
+    id: 8,
+    name: 'عالم المعلومات',
+    subtitle: 'اختبر معلوماتك العامة',
+    emoji: '🌍',
+    color: Colors.tealAccent,
+  ),
 ];
 
 // ================= HOME =================
@@ -204,7 +248,8 @@ class _HomePageState extends State<HomePage> {
   int xp = 0;
   int level = 1;
   int completed = 0;
-  int stars = 0;
+  int totalStars = 0;
+  bool loading = true;
 
   @override
   void initState() {
@@ -215,31 +260,32 @@ class _HomePageState extends State<HomePage> {
   Future<void> refreshData() async {
     final prefs = await SharedPreferences.getInstance();
 
+    final newCoins = await RewardManager.getCoins();
+    final newXP = await RewardManager.getXP();
+    final newLevel = await RewardManager.getPlayerLevel();
+
     int done = 0;
-    int earnedStars = 0;
+    int stars = 0;
 
     for (int w = 1; w <= 8; w++) {
       for (int s = 1; s <= 100; s++) {
-        if (prefs.getBool('reward_w${w}_s$s') ?? false {
+        if (prefs.getBool('reward_w${w}_s$s') ?? false) {
           done++;
         }
 
-        earnedStars += prefs.getInt('stars_w${w}_s$s') ?? 0;
+        stars += prefs.getInt('stars_w${w}_s$s') ?? 0;
       }
     }
-
-    final c = await RewardManager.getCoins();
-    final x = await RewardManager.getXP();
-    final l = await RewardManager.getPlayerLevel();
 
     if (!mounted) return;
 
     setState(() {
-      coins = c;
-      xp = x;
-      level = l;
+      coins = newCoins;
+      xp = newXP;
+      level = newLevel;
       completed = done;
-      stars = earnedStars;
+      totalStars = stars;
+      loading = false;
     });
   }
 
@@ -252,11 +298,11 @@ class _HomePageState extends State<HomePage> {
     await refreshData();
   }
 
-  Future<void> openWorld(int world) async {
+  Future<void> openWorld(GameWorld world) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => StagePage(worldIndex: world),
+        builder: (_) => StagePage(worldIndex: world.id),
       ),
     );
 
@@ -265,15 +311,15 @@ class _HomePageState extends State<HomePage> {
 
   Widget statCard(
     IconData icon,
+    String title,
     String value,
-    String label,
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(17),
         border: Border.all(color: color.withOpacity(.25)),
       ),
       child: Column(
@@ -283,14 +329,13 @@ class _HomePageState extends State<HomePage> {
           Text(
             value,
             style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            label,
-            textAlign: TextAlign.center,
+            title,
             style: const TextStyle(
               color: Colors.white54,
               fontSize: 11,
@@ -301,302 +346,231 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget worldCard(GameWorld world) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(22),
+      onTap: () => openWorld(world),
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: world.color.withOpacity(.35)),
+          gradient: LinearGradient(
+            colors: [
+              world.color.withOpacity(.12),
+              surface,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: world.color.withOpacity(.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                world.emoji,
+                style: const TextStyle(fontSize: 27),
+              ),
+            ),
+            const Spacer(),
+            Text(
+              world.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              world.subtitle,
+              maxLines: 2,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: refreshData,
-          color: gold,
-          child: ListView(
-            padding: const EdgeInsets.all(18),
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [purple, cyan],
+      body: RefreshIndicator(
+        onRefresh: refreshData,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 45, 18, 25),
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'BRAIN CLASH',
+                        style: TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: const Icon(
-                      Icons.psychology_alt_rounded,
-                      color: Colors.white,
-                      size: 30,
-                    ),
+                      SizedBox(height: 5),
+                      Text(
+                        'صراع العقول',
+                        style: TextStyle(color: gold, fontSize: 16),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(
+                ),
+                IconButton(
+                  onPressed: openShop,
+                  icon: const Icon(
+                    Icons.shopping_bag_rounded,
+                    color: gold,
+                    size: 29,
+                  ),
+                  tooltip: 'المتجر',
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF202B50), Color(0xFF171C32)],
+                ),
+                border: Border.all(color: cyan.withOpacity(.25)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.emoji_events_rounded,
+                    color: gold,
+                    size: 43,
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'BRAIN CLASH',
+                        const Text(
+                          'رحلة العبقرية',
                           style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
                           ),
                         ),
+                        const SizedBox(height: 6),
                         Text(
-                          'صراع العقول',
+                          'أكمل المراحل وارفع مستوى ذكائك',
                           style: TextStyle(
-                            color: cyan,
-                            fontWeight: FontWeight.bold,
+                            color: Colors.white.withOpacity(.65),
+                            fontSize: 12,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    onPressed: openShop,
-                    icon: const Icon(Icons.shopping_bag_rounded),
-                    color: gold,
                   ),
                 ],
               ),
-
-              const SizedBox(height: 25),
-
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF303B77),
-                      Color(0xFF171D38),
-                      Color(0xFF21163F),
-                    ],
+            ),
+            const SizedBox(height: 15),
+            Row(
+              children: [
+                Expanded(
+                  child: statCard(
+                    Icons.monetization_on,
+                    'العملات',
+                    loading ? '...' : '$coins',
+                    gold,
                   ),
-                  border: Border.all(color: purple.withOpacity(.4)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'مرحباً أيها العبقري',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'المستوى $level',
-                      style: const TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        const Icon(Icons.bolt_rounded, color: cyan),
-                        const SizedBox(width: 5),
-                        Text('$xp XP'),
-                        const Spacer(),
-                        const Icon(Icons.monetization_on, color: gold),
-                        const SizedBox(width: 5),
-                        Text(
-                          '$coins',
-                          style: const TextStyle(
-                            color: gold,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: LinearProgressIndicator(
-                        minHeight: 7,
-                        value: (xp % 100) / 100,
-                        backgroundColor: Colors.white12,
-                        color: cyan,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'واصل التحدي للوصول إلى المستوى التالي',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 9),
+                Expanded(
+                  child: statCard(
+                    Icons.bolt,
+                    'الخبرة',
+                    loading ? '...' : '$xp',
+                    cyan,
+                  ),
                 ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: statCard(
+                    Icons.star,
+                    'النجوم',
+                    loading ? '...' : '$totalStars',
+                    Colors.orangeAccent,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: surface,
+                borderRadius: BorderRadius.circular(18),
               ),
-
-              const SizedBox(height: 15),
-
-              Row(
+              child: Row(
                 children: [
-                  Expanded(
-                    child: statCard(
-                      Icons.flag_rounded,
-                      '$completed',
-                      'مرحلة مكتملة',
-                      cyan,
-                    ),
+                  const Icon(Icons.military_tech, color: purple, size: 27),
+                  const SizedBox(width: 10),
+                  Text(
+                    'المستوى $level',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: statCard(
-                      Icons.star_rounded,
-                      '$stars',
-                      'نجوم مكتسبة',
-                      gold,
-                    ),
+                  const Spacer(),
+                  Text(
+                    '$completed / 800 مرحلة',
+                    style: const TextStyle(color: Colors.white54),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 24),
-
-              InkWell(
-                onTap: () => openWorld(1),
-                borderRadius: BorderRadius.circular(22),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 19,
-                    horizontal: 20,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [purple, Color(0xFF6551D9)],
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.play_circle_fill, size: 32),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'ابدأ التحدي',
-                              style: TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'اختبر قدرات عقلك الآن',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.arrow_forward_ios, size: 17),
-                    ],
-                  ),
-                ),
+            ),
+            const SizedBox(height: 25),
+            const Text(
+              'اختر عالمك',
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 13),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: worlds.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.12,
               ),
-
-              const SizedBox(height: 28),
-
-              const Text(
-                'عوالم العقل',
+              itemBuilder: (context, index) => worldCard(worlds[index]),
+            ),
+            const SizedBox(height: 25),
+            const Center(
+              child: Text(
+                'تطوير سجاد السعيدي',
                 style: TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.w900,
+                  color: gold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-
-              const SizedBox(height: 15),
-
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: worlds.length,
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 13,
-                  mainAxisSpacing: 13,
-                  childAspectRatio: .92,
-                ),
-                itemBuilder: (context, i) {
-                  final world = worlds[i];
-
-                  return InkWell(
-                    onTap: () => openWorld(i + 1),
-                    borderRadius: BorderRadius.circular(23),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            world.color.withOpacity(.15),
-                            surface,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(23),
-                        border: Border.all(
-                          color: world.color.withOpacity(.35),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: world.color.withOpacity(.12),
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Text(
-                              world.emoji,
-                              style: const TextStyle(fontSize: 28),
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            world.name,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            world.subtitle,
-                            maxLines: 2,
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 25),
-
-              const Center(
-                child: Text(
-                  'تطوير سجاد السعيدي',
-                  style: TextStyle(
-                    color: gold,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -635,14 +609,12 @@ class _StagePageState extends State<StagePage> {
     final completed = <bool>[];
 
     for (int stage = 1; stage <= 100; stage++) {
-      stars.add(prefs.getInt(
-            'stars_w${widget.worldIndex}_s$stage',
-          ) ??
-          0);
+      stars.add(
+        prefs.getInt('stars_w${widget.worldIndex}_s$stage') ?? 0,
+      );
 
       completed.add(
-        prefs.getBool('reward_w${widget.worldIndex}_s$stage') ??
-            false,
+        prefs.getBool('reward_w${widget.worldIndex}_s$stage') ?? false,
       );
     }
 
@@ -680,4 +652,80 @@ class _StagePageState extends State<StagePage> {
   Widget build(BuildContext context) {
     final world = worlds[widget.worldIndex - 1];
 
-    return Sc
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(world.name),
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: cyan))
+          : GridView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: 100,
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: .95,
+              ),
+              itemBuilder: (context, index) {
+                final stage = index + 1;
+                final unlocked = isUnlocked(stage);
+                final done = completedStages[index];
+                final stars = stageStars[index];
+
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: unlocked ? () => openStage(stage) : null,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: done
+                          ? world.color.withOpacity(.18)
+                          : surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: done
+                            ? world.color
+                            : unlocked
+                                ? gold.withOpacity(.45)
+                                : Colors.white12,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          done
+                              ? Icons.check_circle_rounded
+                              : unlocked
+                                  ? Icons.play_circle_fill
+                                  : Icons.lock_rounded,
+                          color: done
+                              ? world.color
+                              : unlocked
+                                  ? gold
+                                  : Colors.white30,
+                          size: 25,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '$stage',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          done ? '⭐' * stars : ' ',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
