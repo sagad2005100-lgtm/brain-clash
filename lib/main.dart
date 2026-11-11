@@ -1,5 +1,6 @@
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,21 +28,22 @@ class BrainClashApp extends StatelessWidget {
       title: 'Brain Clash',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
         useMaterial3: true,
+        brightness: Brightness.dark,
         scaffoldBackgroundColor: bg,
         colorScheme: const ColorScheme.dark(
           primary: gold,
           secondary: cyan,
           surface: surface,
         ),
+        fontFamily: 'Roboto',
       ),
       home: const SplashPage(),
     );
   }
 }
 
-// ================= SPLASH =================
+// ================= SPLASH SCREEN =================
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -53,7 +55,7 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController controller;
-  late final Animation<double> scale;
+  late final Animation<double> animation;
 
   @override
   void initState() {
@@ -61,22 +63,30 @@ class _SplashPageState extends State<SplashPage>
 
     controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1300),
+      duration: const Duration(milliseconds: 1600),
     );
 
-    scale = CurvedAnimation(
+    animation = CurvedAnimation(
       parent: controller,
       curve: Curves.easeOutBack,
     );
 
     controller.forward();
 
-    Timer(const Duration(seconds: 3), () {
+    Timer(const Duration(milliseconds: 2500), () {
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 700),
+          pageBuilder: (_, __, ___) => const HomePage(),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+        ),
       );
     });
   }
@@ -97,97 +107,108 @@ class _SplashPageState extends State<SplashPage>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF20265A),
-              bg,
-              Color(0xFF1C1038),
+              Color(0xFF171D42),
+              Color(0xFF080B16),
+              Color(0xFF160D30),
             ],
           ),
         ),
         child: AnimatedBuilder(
-          animation: scale,
-          builder: (_, __) => Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Transform.scale(
-                scale: scale.value,
-                child: Container(
-                  width: 125,
-                  height: 125,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [purple, cyan],
-                    ),
-                    borderRadius: BorderRadius.circular(35),
-                    boxShadow: [
-                      BoxShadow(
-                        color: purple.withOpacity(.4),
-                        blurRadius: 40,
+          animation: animation,
+          builder: (_, __) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Transform.scale(
+                  scale: animation.value,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(35),
+                      gradient: const LinearGradient(
+                        colors: [purple, cyan],
                       ),
-                    ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: purple.withOpacity(.4),
+                          blurRadius: 45,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.psychology_alt_rounded,
+                      size: 75,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.psychology_alt_rounded,
-                    size: 75,
-                    color: Colors.white,
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  'BRAIN CLASH',
+                  style: TextStyle(
+                    fontSize: 35,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 4,
                   ),
                 ),
-              ),
-              const SizedBox(height: 30),
-              const Text(
-                'BRAIN CLASH',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 4,
+                const SizedBox(height: 8),
+                const Text(
+                  'صراع العقول',
+                  style: TextStyle(
+                    fontSize: 22,
+                    color: cyan,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'صراع العقول',
-                style: TextStyle(
-                  color: cyan,
-                  fontSize: 23,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 45),
+                const SizedBox(
+                  width: 35,
+                  height: 35,
+                  child: CircularProgressIndicator(
+                    color: gold,
+                    strokeWidth: 3,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              const CircularProgressIndicator(color: gold),
-              const SizedBox(height: 60),
-              const Text(
-                'تطوير سجاد السعيدي',
-                style: TextStyle(
-                  color: gold,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 65),
+                const Text(
+                  'تطوير سجاد السعيدي',
+                  style: TextStyle(
+                    color: gold,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'TRAIN YOUR MIND',
-                style: TextStyle(
-                  color: Colors.white38,
-                  letterSpacing: 3,
+                const SizedBox(height: 10),
+                const Text(
+                  'TRAIN YOUR MIND',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    letterSpacing: 3,
+                    fontSize: 10,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-// ================= WORLD MODEL =================
+// ================= WORLDS =================
 
 class World {
   final String name;
-  final String description;
+  final String subtitle;
   final String emoji;
   final Color color;
 
   const World(
     this.name,
-    this.description,
+    this.subtitle,
     this.emoji,
     this.color,
   );
@@ -197,14 +218,14 @@ const worlds = <World>[
   World('عالم الذاكرة', 'اختبر قوة ذاكرتك', '🧠', purple),
   World('عالم الرياضيات', 'تحديات الأرقام', '🔢', cyan),
   World('عالم الكلمات', 'ألغاز وحروف', '🔤', Colors.orange),
-  World('عالم المنطق', 'حل الأنماط المعقدة', '🧩', Colors.greenAccent),
-  World('عالم التركيز', 'لاحظ التفاصيل', '👁', Colors.pinkAccent),
+  World('عالم المنطق', 'حل المستحيل', '🧩', Colors.greenAccent),
+  World('عالم التركيز', 'لاحظ ما لا يلاحظه الآخرون', '👁', Colors.pinkAccent),
   World('عالم الأشكال', 'ذكاء بصري', '🔷', Colors.blueAccent),
-  World('عالم الاستراتيجية', 'خطط قبل الحركة', '♟', gold),
+  World('عالم الاستراتيجية', 'خطط قبل أن تتحرك', '♟', Colors.amber),
   World('عالم المعلومات', 'اختبر معلوماتك', '🌍', Colors.tealAccent),
 ];
 
-// ================= HOME =================
+// ================= HOME PAGE =================
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -230,15 +251,18 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
 
     int done = 0;
-    int totalStars = 0;
+    int earned = 0;
 
     for (int w = 1; w <= 8; w++) {
       for (int s = 1; s <= 100; s++) {
-        if (prefs.getBool('reward_w${w}_s$s') ?? false {
-          done++;
-        }
+        final isDone =
+            prefs.getBool('reward_w${w}_s$s') ?? false;
 
-        totalStars += prefs.getInt('stars_w${w}_s$s') ?? 0;
+        final stageStars =
+            prefs.getInt('stars_w${w}_s$s') ?? 0;
+
+        if (isDone) done++;
+        earned += stageStars;
       }
     }
 
@@ -253,55 +277,63 @@ class _HomePageState extends State<HomePage> {
       xp = x;
       level = l;
       completed = done;
-      stars = totalStars;
+      stars = earned;
     });
   }
 
   Future<void> openShop() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const ShopPage()),
+      MaterialPageRoute(
+        builder: (_) => const ShopPage(),
+      ),
     );
-    refreshData();
+
+    await refreshData();
   }
 
-  Future<void> openWorld(int world) async {
+  Future<void> openWorld(int worldIndex) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => StagePage(worldIndex: world),
+        builder: (_) => StagePage(
+          worldIndex: worldIndex,
+        ),
       ),
     );
-    refreshData();
+
+    await refreshData();
   }
 
-  Widget stat(
+  Widget statCard(
     IconData icon,
     String value,
-    String title,
+    String label,
     Color color,
   ) {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(.2)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: color.withOpacity(.25),
+        ),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 26),
+          Icon(icon, color: color, size: 25),
           const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 23,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            title,
+            label,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white54,
@@ -321,7 +353,7 @@ class _HomePageState extends State<HomePage> {
           onRefresh: refreshData,
           color: gold,
           child: ListView(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
             children: [
               Row(
                 children: [
@@ -335,6 +367,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     child: const Icon(
                       Icons.psychology_alt_rounded,
+                      color: Colors.white,
                       size: 30,
                     ),
                   ),
@@ -348,6 +381,7 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
                           ),
                         ),
                         Text(
@@ -370,26 +404,48 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 25),
 
-              // PLAYER CARD
               Container(
                 padding: const EdgeInsets.all(22),
                 decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
                   gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                     colors: [
                       Color(0xFF303B77),
                       Color(0xFF171D38),
                       Color(0xFF21163F),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: purple.withOpacity(.4)),
+                  border: Border.all(
+                    color: purple.withOpacity(.4),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: purple.withOpacity(.12),
+                      blurRadius: 25,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'مرحباً أيها العبقري 🧠',
-                      style: TextStyle(color: Colors.white70),
+                    const Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'مرحباً أيها العبقري',
+                            style: TextStyle(
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.stars_rounded,
+                          color: gold,
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -402,11 +458,17 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        const Icon(Icons.bolt, color: cyan),
+                        const Icon(
+                          Icons.bolt_rounded,
+                          color: cyan,
+                        ),
                         const SizedBox(width: 5),
                         Text('$xp XP'),
                         const Spacer(),
-                        const Icon(Icons.monetization_on, color: gold),
+                        const Icon(
+                          Icons.monetization_on,
+                          color: gold,
+                        ),
                         const SizedBox(width: 5),
                         Text(
                           '$coins',
@@ -429,7 +491,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'واصل التحدي للوصول للمستوى التالي',
+                      'واصل التحدي للوصول إلى المستوى التالي',
                       style: TextStyle(
                         color: Colors.white54,
                         fontSize: 11,
@@ -444,7 +506,7 @@ class _HomePageState extends State<HomePage> {
               Row(
                 children: [
                   Expanded(
-                    child: stat(
+                    child: statCard(
                       Icons.flag_rounded,
                       '$completed',
                       'مرحلة مكتملة',
@@ -453,7 +515,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: stat(
+                    child: statCard(
                       Icons.star_rounded,
                       '$stars',
                       'نجوم مكتسبة',
@@ -465,27 +527,36 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 24),
 
-              // PLAY BUTTON
               InkWell(
                 onTap: () => openWorld(1),
                 borderRadius: BorderRadius.circular(22),
                 child: Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 19,
+                    horizontal: 20,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [purple, Color(0xFF6551D9)],
+                      colors: [
+                        purple,
+                        Color(0xFF6551D9),
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
-                        color: purple.withOpacity(.25),
+                        color: purple.withOpacity(.3),
                         blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.play_circle_fill, size: 35),
+                      Icon(
+                        Icons.play_circle_fill,
+                        size: 32,
+                      ),
                       SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -500,12 +571,18 @@ class _HomePageState extends State<HomePage> {
                             ),
                             Text(
                               'اختبر قدرات عقلك الآن',
-                              style: TextStyle(color: Colors.white70),
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.arrow_forward_ios, size: 16),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 17,
+                      ),
                     ],
                   ),
                 ),
@@ -513,12 +590,25 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 28),
 
-              const Text(
-                'عوالم العقل',
-                style: TextStyle(
-                  fontSize: 23,
-                  fontWeight: FontWeight.w900,
-                ),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'عوالم العقل',
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '08 عوالم',
+                    style: TextStyle(
+                      color: cyan.withOpacity(.8),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 15),
@@ -544,6 +634,8 @@ class _HomePageState extends State<HomePage> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                           colors: [
                             world.color.withOpacity(.15),
                             surface,
@@ -565,106 +657,5 @@ class _HomePageState extends State<HomePage> {
                             ),
                             child: Text(
                               world.emoji,
-                              style: const TextStyle(fontSize: 28),
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            world.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            world.description,
-                            maxLines: 2,
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '100 مرحلة',
-                                  style: TextStyle(
-                                    color: world.color,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.arrow_forward_ios,
-                                color: world.color,
-                                size: 12,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 25),
-
-              const Center(
-                child: Text(
-                  'تطوير سجاد السعيدي',
-                  style: TextStyle(
-                    color: gold,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ================= STAGES =================
-
-class StagePage extends StatefulWidget {
-  final int worldIndex;
-
-  const StagePage({
-    super.key,
-    required this.worldIndex,
-  });
-
-  @override
-  State<StagePage> createState() => _StagePageState();
-}
-
-class _StagePageState extends State<StagePage> {
-  final Map<int, int> stageStars = {};
-  int unlocked = 1;
-  bool loading = true;
-
-  World get world => worlds[widget.worldIndex - 1];
-
-  @override
-  void initState() {
-    super.initState();
-    loadStages();
-  }
-
-  Future<void> loadStages() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    int highest = 1;
-
-    for (int s = 1; s <= 100; s++) {
-      final completed =
-          prefs.getBool('reward_w${widget.worldIndex}_s$s') ?? false;
-
-      stageS
+                              style: const TextStyle(
+      
