@@ -3,6 +3,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const gameBg = Color(0xFF080B16);
+const gameCard = Color(0xFF151B30);
+const gameGold = Color(0xFFFFD166);
+const gameCyan = Color(0xFF55D6FF);
+const gamePurple = Color(0xFF9B7BFF);
+
 class MiniGamePage extends StatefulWidget {
   final int world;
   final int stage;
@@ -24,6 +30,7 @@ class _MiniGamePageState extends State<MiniGamePage> {
   int score = 0;
   int selected = -1;
   int hintsCount = 0;
+  int correctStreak = 0;
 
   bool answered = false;
   bool finished = false;
@@ -41,196 +48,389 @@ class _MiniGamePageState extends State<MiniGamePage> {
     loadHints();
   }
 
+  int get difficulty => min(100, widget.stage + questionIndex);
+
+  Color get worldColor {
+    const colors = [
+      gamePurple,
+      gameCyan,
+      Colors.orange,
+      Colors.greenAccent,
+      Colors.pinkAccent,
+      Colors.blueAccent,
+      gameGold,
+      Colors.tealAccent,
+    ];
+    return colors[(widget.world - 1).clamp(0, 7)];
+  }
+
   Future<void> loadHints() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
+    setState(() => hintsCount = prefs.getInt('inventory_hints') ?? 0);
+  }
 
-    setState(() {
-      hintsCount = prefs.getInt('inventory_hints') ?? 0;
-    });
+  int rand(int minValue, int maxValue) =>
+      minValue + random.nextInt(maxValue - minValue + 1);
+
+  List<String> choices(String answer, List<String> wrong) {
+    final result = <String>{answer};
+
+    for (final value in wrong) {
+      if (value != answer) result.add(value);
+    }
+
+    while (result.length < 4) {
+      result.add('${rand(10, 999)}');
+    }
+
+    final list = result.take(4).toList();
+    list.shuffle(random);
+    return list;
+  }
+
+  Map<String, dynamic> make(
+    String q,
+    String answer,
+    String explanation,
+    List<String> wrong,
+  ) {
+    return {
+      'q': q,
+      'a': answer,
+      'e': explanation,
+      'o': choices(answer, wrong),
+    };
   }
 
   void loadQuestion() {
-    final level = widget.stage + questionIndex;
-    final item = generateQuestion(level);
+    final item = generateQuestion(difficulty);
 
     question = item['q'];
     correctAnswer = item['a'];
     explanation = item['e'];
-
     options = List<String>.from(item['o']);
-    options = options.toSet().toList();
-    options.shuffle(random);
 
     selected = -1;
     answered = false;
     hintUsed = false;
   }
 
+  // ================= QUESTION ENGINE =================
+
   Map<String, dynamic> generateQuestion(int level) {
-    final n = max(1, level);
+    final d = max(1, level);
 
     switch (widget.world) {
+      // MEMORY
       case 1:
-        final a = random.nextInt(9) + 1;
-        final b = random.nextInt(9) + 1;
-        final c = random.nextInt(9) + 1;
-        final seq = '$a,$b,$c';
+        final length = min(10, 3 + d ~/ 8);
+        final sequence = List.generate(length, (_) => rand(0, 9));
+        final answer = sequence.join();
 
-        return {
-          'q': 'اختبر ذاكرتك: ما الترتيب الصحيح للأرقام؟',
-          'a': seq,
-          'e': 'الترتيب هو $seq',
-          'o': [seq, '$b,$a,$c', '$c,$b,$a', '$a,$c,$b']
-        };
+        final wrong = <String>[];
 
+        while (wrong.length < 3) {
+          final alternative = List<int>.from(sequence);
+          final index = rand(0, length - 1);
+          alternative[index] = (alternative[index] + rand(1, 9)) % 10;
+
+          final value = alternative.join();
+
+          if (value != answer && !wrong.contains(value)) {
+            wrong.add(value);
+          }
+        }
+
+        return make(
+          'اختبر ذاكرتك:\n\n'
+          '$answer\n\n'
+          'ما التسلسل الصحيح الذي شاهدته؟',
+          answer,
+          'التسلسل الأصلي هو $answer',
+          wrong,
+        );
+
+      // MATHEMATICS
       case 2:
-        final a = random.nextInt(n * 2 + 10) + 2;
-        final b = random.nextInt(9) + 2;
-        final answer = a * b;
+        final a = rand(10, 20 + d * 3);
+        final b = rand(5, 15 + d);
+        final c = rand(2, 10);
+        final type = d < 8 ? 0 : rand(0, 3);
 
-        return {
-          'q': 'كم يساوي $a × $b ؟',
-          'a': '$answer',
-          'e': '$a × $b = $answer',
-          'o': ['$answer', '${answer + b}', '${answer - b}', '${answer + a}']
-        };
+        int answer;
+        String q;
+        String exp;
 
+        if (type == 0) {
+          answer = a * b;
+          q = 'احسب بدقة:\n$a × $b';
+          exp = '$a × $b = $answer';
+        } else if (type == 1) {
+          answer = a * b + c;
+          q = 'احسب:\n($a × $b) + $c';
+          exp = '($a × $b) + $c = $answer';
+        } else if (type == 2) {
+          answer = a * b - c;
+          q = 'احسب:\n($a × $b) - $c';
+          exp = '($a × $b) - $c = $answer';
+        } else {
+          answer = a * a - b;
+          q = 'احسب:\n$a² - $b';
+          exp = '$a × $a - $b = $answer';
+        }
+
+        return make(
+          q,
+          '$answer',
+          exp,
+          [
+            '${answer + c}',
+            '${answer - b}',
+            '${answer + a}',
+            '${answer + rand(1, 9)}',
+          ],
+        );
+
+      // WORDS
       case 3:
         final words = [
-          ['باتك', 'كتاب'],
-          ['ةسردم', 'مدرسة'],
-          ['ملق', 'قلم'],
-          ['سمش', 'شمس'],
-          ['رمق', 'قمر'],
-          ['ةرجش', 'شجرة'],
-          ['ةذفان', 'نافذة'],
+          'استراتيجية',
+          'مستقبل',
+          'عبقرية',
+          'احتمالات',
+          'استنتاج',
+          'تكنولوجيا',
+          'معلومات',
+          'اكتشاف',
+          'تحديات',
+          'ابتكار',
+          'معادلة',
+          'ذاكرة',
+          'منطق',
+          'تفكير',
+          'تركيز',
         ];
 
-        final w = words[random.nextInt(words.length)];
+        final word = words[rand(0, words.length - 1)];
+        final chars = word.split('');
+        chars.shuffle(random);
+        final scrambled = chars.join();
 
-        return {
-          'q': 'رتّب الحروف لتكوين كلمة: ${w[0]}',
-          'a': w[1],
-          'e': 'الكلمة الصحيحة هي ${w[1]}',
-          'o': [w[1], 'كتاب', 'قلم', 'شمس']
-        };
+        final wrong = words.where((w) => w != word).toList()
+          ..shuffle(random);
 
+        return make(
+          'كوّن الكلمة الصحيحة من الحروف:\n\n$scrambled',
+          word,
+          'الكلمة الصحيحة: $word',
+          wrong.take(3).toList(),
+        );
+
+      // LOGIC
       case 4:
-        final start = random.nextInt(15) + 1;
-        final step = random.nextInt(5) + 2;
-        final answer = start + step * 3;
+        final start = rand(2, 20);
+        final step = rand(2, 5 + d ~/ 4);
+        final multiplier = rand(2, 3);
+        final type = d < 6 ? 0 : rand(0, 2);
 
-        return {
-          'q': 'أكمل النمط: $start، ${start + step}، ${start + step * 2}، ؟',
-          'a': '$answer',
-          'e': 'نضيف $step في كل مرة',
-          'o': ['$answer', '${answer + 1}', '${answer - step}', '${answer + step}']
-        };
+        late List<int> sequence;
+        late int answer;
+        late String explanation;
 
+        if (type == 0) {
+          sequence = List.generate(4, (i) => start + step * i);
+          answer = start + step * 4;
+          explanation = 'نضيف $step في كل مرة';
+        } else if (type == 1) {
+          sequence = List.generate(
+            4,
+            (i) => start * pow(multiplier, i).toInt(),
+          );
+          answer = start * pow(multiplier, 4).toInt();
+          explanation = 'نضرب كل رقم بـ $multiplier';
+        } else {
+          sequence = List.generate(
+            4,
+            (i) => start + i * i * step,
+          );
+          answer = start + 16 * step;
+          explanation = 'الزيادة تعتمد على مربعات الأعداد';
+        }
+
+        return make(
+          'اكتشف النمط وأكمله:\n\n'
+          '${sequence.join('  •  ')}  •  ؟',
+          '$answer',
+          explanation,
+          [
+            '${answer + 1}',
+            '${answer + step}',
+            '${answer - step}',
+          ],
+        );
+
+      // FOCUS
       case 5:
-        final a = random.nextInt(8) + 2;
-        final b = a + random.nextInt(3) + 2;
+        final base = rand(10, 100 + d * 5);
+        final type = rand(0, 2);
 
-        return {
-          'q': 'ما الرقم المختلف؟',
-          'a': '$b',
-          'e': 'الرقم المختلف هو $b',
-          'o': ['$a', '$a', '$b', '$a']
-        };
+        late List<int> nums;
+        late int odd;
+        late String reason;
 
+        if (type == 0) {
+          nums = [
+            base * 2,
+            base * 4,
+            base * 6,
+            base * 2 + 1,
+          ];
+          odd = base * 2 + 1;
+          reason = 'الأعداد الأخرى زوجية، وهذا العدد فردي';
+        } else if (type == 1) {
+          nums = [
+            base * 3,
+            base * 5,
+            base * 7,
+            base * 3 + 2,
+          ];
+          odd = base * 3 + 2;
+          reason = 'الأعداد الأخرى تقبل القسمة على 3';
+        } else {
+          nums = [
+            base * base,
+            base * base + 1,
+            base * base + 4,
+            base * base + 9,
+          ];
+          odd = base * base + 1;
+          reason = 'العدد المختلف ليس مربعاً كاملاً';
+        }
+
+        nums.shuffle(random);
+
+        return make(
+          'اكتشف العدد الذي لا ينتمي إلى المجموعة:\n\n'
+          '${nums.join('     ')}',
+          '$odd',
+          reason,
+          nums.where((n) => n != odd).map((n) => '$n').toList(),
+        );
+
+      // VISUAL PATTERNS
       case 6:
         final patterns = [
-          ['🔴 🔵 🔴 🔵 ؟', '🔴'],
-          ['⭐ 🌙 ⭐ 🌙 ؟', '⭐'],
-          ['🟢 🟡 🟢 🟡 ؟', '🟢'],
-          ['🔺 🔵 🔺 🔵 ؟', '🔺']
+          ['🔴', '🔵', '🟢', '🟡'],
+          ['▲', '■', '●', '◆'],
+          ['⭐', '🌙', '☀️', '⚡'],
+          ['⬆️', '➡️', '⬇️', '⬅️'],
         ];
 
-        final p = patterns[random.nextInt(patterns.length)];
+        final p = patterns[rand(0, patterns.length - 1)];
+        final step = rand(1, 3);
 
-        return {
-          'q': 'أكمل النمط: ${p[0]}',
-          'a': p[1],
-          'e': 'النمط يتكرر بالتناوب',
-          'o': [p[1], '🔵', '🟡', '⭐']
-        };
+        final sequence = List.generate(
+          5,
+          (i) => p[(i * step) % p.length],
+        );
 
+        final answer = p[(5 * step) % p.length];
+
+        return make(
+          'اكتشف النمط البصري:\n\n'
+          '${sequence.join('   ')}   ؟',
+          answer,
+          'يتكرر ترتيب الرموز وفق النمط نفسه',
+          p.where((x) => x != answer).toList(),
+        );
+
+      // STRATEGY
       case 7:
-        final moves = random.nextInt(8) + 2;
+        final step = rand(3, 10 + d);
+        final moves = rand(3, 7);
 
-        return {
-          'q': 'تحرك $moves خطوات للأمام ثم خطوتين للخلف. كم خطوة بقيت؟',
-          'a': '${moves - 2}',
-          'e': '$moves - 2 = ${moves - 2}',
-          'o': ['${moves - 2}', '$moves', '${moves + 2}', '${moves - 1}']
-        };
+        final forward = moves * step;
+        final backward = (moves - 1) * (step - 2);
+        final answer = forward - backward;
 
+        return make(
+          'تحدي التخطيط:\n'
+          'تتحرك $moves مرات للأمام بمقدار $step، '
+          'ثم تتراجع ${moves - 1} مرات بمقدار ${step - 2}.\n'
+          'ما صافي الحركة؟',
+          '$answer',
+          '$forward - $backward = $answer',
+          [
+            '${answer + step}',
+            '${answer - step}',
+            '${answer + moves}',
+          ],
+        );
+
+      // GENERAL KNOWLEDGE
       default:
         final facts = [
-          ['ما أكبر كوكب في المجموعة الشمسية؟', 'المشتري', 'المشتري أكبر كواكب المجموعة الشمسية'],
-          ['كم عدد أيام الأسبوع؟', '7', 'الأسبوع يتكون من سبعة أيام'],
-          ['ما عاصمة العراق؟', 'بغداد', 'بغداد عاصمة العراق'],
-          ['كم عدد قارات العالم؟', '7', 'عدد القارات سبع'],
-          ['ما الكوكب الأحمر؟', 'المريخ', 'المريخ يعرف بالكوكب الأحمر'],
-          ['ما أسرع حيوان بري؟', 'الفهد', 'الفهد أسرع الحيوانات البرية'],
-          ['كم ضلع للمثلث؟', '3', 'المثلث له ثلاثة أضلاع'],
-          ['ما أقرب نجم إلى الأرض؟', 'الشمس', 'الشمس أقرب نجم إلى الأرض'],
+          ['ما العنصر الكيميائي الذي رمزه Fe؟', 'الحديد', 'Fe هو رمز الحديد'],
+          ['ما أكبر محيط في العالم؟', 'المحيط الهادئ', 'المحيط الهادئ الأكبر'],
+          ['كم عدد عظام جسم الإنسان البالغ تقريباً؟', '206', 'العدد المعتاد 206'],
+          ['ما الغاز الأكثر وجوداً في الغلاف الجوي؟', 'النيتروجين', 'النيتروجين يشكل نحو 78%'],
+          ['ما الكوكب الأقرب إلى الشمس؟', 'عطارد', 'عطارد أقرب الكواكب للشمس'],
+          ['ما وحدة قياس شدة التيار الكهربائي؟', 'الأمبير', 'شدة التيار تقاس بالأمبير'],
+          ['ما عاصمة اليابان؟', 'طوكيو', 'طوكيو عاصمة اليابان'],
+          ['ما العضو المسؤول عن ضخ الدم؟', 'القلب', 'القلب يضخ الدم'],
+          ['كم عدد أضلاع الشكل السداسي؟', '6', 'السداسي له ستة أضلاع'],
+          ['ما أكبر قارة مساحة؟', 'آسيا', 'آسيا أكبر قارات العالم'],
+          ['ما اللغة الرسمية في البرازيل؟', 'البرتغالية', 'البرازيل تتحدث البرتغالية'],
+          ['ما الكوكب الذي يمتلك حلقات واضحة؟', 'زحل', 'زحل مشهور بحلقاته'],
         ];
 
-        final f = facts[random.nextInt(facts.length)];
+        final f = facts[rand(0, facts.length - 1)];
 
-        return {
-          'q': f[0],
-          'a': f[1],
-          'e': f[2],
-          'o': [f[1], 'القمر', 'الأرض', 'زحل']
-        };
+        final wrong = facts.map((x) => x[1]).toSet().toList()
+          ..remove(f[1])
+          ..shuffle(random);
+
+        return make(
+          f[0],
+          f[1],
+          f[2],
+          wrong.take(3).toList(),
+        );
     }
   }
+
+  // ================= HINT =================
 
   Future<void> useHint() async {
     if (answered || hintUsed) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final currentHints = prefs.getInt('inventory_hints') ?? 0;
+    final current = prefs.getInt('inventory_hints') ?? 0;
 
-    if (currentHints <= 0) {
-      if (!mounted) return;
-
+    if (current <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('ما عندك تلميحات! اشترِ من المتجر 💡'),
+          content: Text('لا توجد تلميحات! اشترِ من المتجر 💡'),
         ),
       );
       return;
     }
 
-    final wrongAnswers =
-        options.where((answer) => answer != correctAnswer).toList();
+    final wrong = options.where((x) => x != correctAnswer).toList()
+      ..shuffle(random);
 
-    wrongAnswers.shuffle(random);
+    final reduced = [correctAnswer, wrong.first]..shuffle(random);
 
-    if (wrongAnswers.isEmpty) return;
-
-    final newOptions = [correctAnswer, wrongAnswers.first];
-    newOptions.shuffle(random);
-
-    await prefs.setInt('inventory_hints', currentHints - 1);
+    await prefs.setInt('inventory_hints', current - 1);
 
     if (!mounted) return;
 
     setState(() {
-      options = newOptions;
-      hintsCount = currentHints - 1;
+      options = reduced;
+      hintsCount = current - 1;
       hintUsed = true;
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تم استخدام التلميح! حُذفت إجابتان خاطئتان 🎯'),
-      ),
-    );
   }
 
   void chooseAnswer(int index) {
@@ -242,12 +442,15 @@ class _MiniGamePageState extends State<MiniGamePage> {
 
       if (options[index] == correctAnswer) {
         score++;
+        correctStreak++;
+      } else {
+        correctStreak = 0;
       }
     });
   }
 
   void nextQuestion() {
-    if (questionIndex == 9) {
+    if (questionIndex >= 9) {
       setState(() => finished = true);
     } else {
       setState(() {
@@ -266,29 +469,24 @@ class _MiniGamePageState extends State<MiniGamePage> {
       'عالم التركيز',
       'عالم الأشكال',
       'عالم الاستراتيجية',
-      'عالم المعلومات'
+      'عالم المعلومات',
     ];
 
-    if (widget.world >= 1 && widget.world <= names.length) {
-      return names[widget.world - 1];
-    }
-
-    return 'عالم المعلومات';
+    return names[(widget.world - 1).clamp(0, 7)];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF10121C),
+      backgroundColor: gameBg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF10121C),
-        foregroundColor: Colors.white,
+        backgroundColor: gameBg,
         title: Text(worldName),
         centerTitle: true,
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           child: finished ? resultScreen() : gameScreen(),
         ),
       ),
@@ -299,178 +497,227 @@ class _MiniGamePageState extends State<MiniGamePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'المرحلة ${widget.stage} • ${questionIndex + 1}/10',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white70),
-        ),
-
-        const SizedBox(height: 15),
-
-        LinearProgressIndicator(
-          value: (questionIndex + 1) / 10,
-          color: const Color(0xFFFFC857),
-          backgroundColor: Colors.white12,
-        ),
-
-        const SizedBox(height: 20),
-
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1D2233),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            question,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'المرحلة ${widget.stage}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
+            Text(
+              'السؤال ${questionIndex + 1}/10',
+              style: TextStyle(color: worldColor),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: LinearProgressIndicator(
+            value: (questionIndex + 1) / 10,
+            minHeight: 7,
+            backgroundColor: Colors.white12,
+            color: worldColor,
           ),
         ),
-
+        const SizedBox(height: 18),
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: gameCard,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: worldColor.withOpacity(.3)),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.psychology_alt, color: worldColor, size: 32),
+              const SizedBox(height: 12),
+              Text(
+                question,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 12),
-
         OutlinedButton.icon(
           onPressed: answered || hintUsed ? null : useHint,
-          icon: const Icon(Icons.lightbulb, color: Color(0xFFFFC857)),
+          icon: const Icon(Icons.lightbulb, color: gameGold),
           label: Text(
-            hintUsed
-                ? 'تم استخدام التلميح'
-                : 'استخدام تلميح 💡 ($hintsCount)',
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFFFC857),
-            side: const BorderSide(color: Color(0xFFFFC857)),
+            hintUsed ? 'تم استخدام التلميح' : 'تلميح ($hintsCount)',
           ),
         ),
-
         const SizedBox(height: 12),
-
         ...List.generate(options.length, (i) {
-          final isRight = options[i] == correctAnswer;
+          final right = options[i] == correctAnswer;
+          Color color = gameCard;
+          Color border = Colors.white12;
 
-          Color color = const Color(0xFF252B3D);
-
-          if (answered && isRight) {
-            color = Colors.green.shade800;
-          }
-
-          if (answered && selected == i && !isRight) {
-            color = Colors.red.shade800;
+          if (answered && right) {
+            color = const Color(0xFF123D32);
+            border = Colors.greenAccent;
+          } else if (answered && selected == i) {
+            color = const Color(0xFF4A1C2A);
+            border = Colors.redAccent;
           }
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: InkWell(
               onTap: () => chooseAnswer(i),
-              child: Container(
-                padding: const EdgeInsets.all(15),
+              borderRadius: BorderRadius.circular(17),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                padding: const EdgeInsets.all(17),
                 decoration: BoxDecoration(
                   color: color,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: border),
                 ),
-                child: Text(
-                  options[i],
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 19),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        options[i],
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (answered && right)
+                      const Icon(Icons.check_circle, color: Colors.greenAccent),
+                    if (answered && selected == i && !right)
+                      const Icon(Icons.cancel, color: Colors.redAccent),
+                  ],
                 ),
               ),
             ),
           );
         }),
-
         const Spacer(),
-
-        if (answered) ...[
-          Text(
-            options[selected] == correctAnswer
-                ? 'إجابة صحيحة! 🎉'
-                : 'إجابة غير صحيحة',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.orangeAccent,
-              fontSize: 18,
+        if (answered)
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: gameCard,
+              borderRadius: BorderRadius.circular(17),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  options[selected] == correctAnswer
+                      ? 'إجابة صحيحة! 🔥'
+                      : 'إجابة غير صحيحة',
+                  style: TextStyle(
+                    color: options[selected] == correctAnswer
+                        ? Colors.greenAccent
+                        : Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  explanation,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: nextQuestion,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: worldColor,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.all(15),
+                    ),
+                    child: Text(
+                      questionIndex == 9 ? 'عرض النتيجة' : 'السؤال التالي',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            explanation,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70),
-          ),
-
-          const SizedBox(height: 12),
-
-          ElevatedButton(
-            onPressed: nextQuestion,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFC857),
-              foregroundColor: Colors.black,
-            ),
-            child: Text(
-              questionIndex == 9 ? 'النتيجة' : 'السؤال التالي',
-            ),
-          ),
-        ],
       ],
     );
   }
 
   Widget resultScreen() {
+    final percent = score * 10;
+    final stars = score >= 9 ? 3 : score >= 7 ? 2 : score >= 5 ? 1 : 0;
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.emoji_events,
-            color: Color(0xFFFFC857),
-            size: 90,
-          ),
-
-          const SizedBox(height: 20),
-
-          const Text(
-            'انتهى التحدي!',
-            style: TextStyle(color: Colors.white, fontSize: 28),
-          ),
-
-          Text(
-            '$score / 10',
-            style: const TextStyle(
-              color: Color(0xFFFFC857),
-              fontSize: 42,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: gameGold.withOpacity(.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.emoji_events_rounded,
+                color: gameGold,
+                size: 75,
+              ),
             ),
-          ),
-
-          const SizedBox(height: 20),
-
-          Text(
-            score >= 8
-                ? 'ممتاز! 🔥'
-                : score >= 5
-                    ? 'أداء جيد!'
-                    : 'حاول مرة ثانية!',
-            style: const TextStyle(color: Colors.white70, fontSize: 18),
-          ),
-
-          const SizedBox(height: 30),
-
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, score),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFC857),
-              foregroundColor: Colors.black,
+            const SizedBox(height: 22),
+            const Text(
+              'انتهى التحدي!',
+              style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
             ),
-            child: const Text('العودة للمراحل'),
-          ),
-        ],
-      ),
-    );
-  }
-}
+            const SizedBox(height: 10),
+            Text(
+              '$score / 10',
+              style: const TextStyle(
+                color: gameGold,
+                fontSize: 48,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Text(
+              '$percent%',
+              style: const TextStyle(color: Colors.white54),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                3,
+                (i) => Icon(
+                  Icons.star_rounded,
+                  size: 45,
+                  color: i < stars ? gameGold : Colors.white12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              score >= 9
+                  ? 'عبقري! أداء أسطوري 🧠'
+                  : score >= 7
+                      ? 'ممتاز! اقتربت من الكمال 🔥'
+                      : score >= 5
+                          ? 'جيد، لكن يمكنك الأفضل!'
+                          : 'تحدّ نفسك وحاول مجدداً!',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+          
